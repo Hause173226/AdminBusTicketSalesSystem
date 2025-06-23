@@ -1,125 +1,130 @@
 import React, { useEffect, useState } from "react";
-import { Bus, BarChart3, Calendar, MapPin } from "lucide-react";
+import { getAllRoutes } from "../../services/routeServices";
 import BasicTable from "../tables/BasicTable";
-import { getAllTrips } from "../../services/tripServices";
+import BasicModal from "../modal/BasicModal";
+import { MapPin, Hash, Clock, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import { Route } from "../type";
 
 const statusColor: Record<string, string> = {
-  "scheduled": "bg-blue-100 text-blue-800",
-  "active": "bg-green-100 text-green-800",
-  "inactive": "bg-gray-100 text-gray-800",
-  "maintenance": "bg-yellow-100 text-yellow-800",
+  active: "bg-green-100 text-green-800",
+  inactive: "bg-gray-100 text-gray-800",
 };
 
-const columns = [
-  { key: "tripCode", label: "Mã chuyến" },
-  { key: "routeId", label: "Tuyến" },
-  { key: "departureDate", label: "Ngày xuất phát" },
-  { key: "departureTime", label: "Giờ đi" },
-  { key: "arrivalTime", label: "Giờ đến" },
-  { key: "basePrice", label: "Giá vé" },
-  { key: "availableSeats", label: "Ghế còn" },
-  {
-    key: "status",
-    label: "Trạng thái",
-    render: (value: string) => (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
-        {value}
-      </span>
-    ),
-  },
-  { key: "notes", label: "Ghi chú" },
-];
+const statusLabel: Record<string, string> = {
+  active: "Hoạt động",
+  inactive: "Ngừng hoạt động",
+};
 
 const ManagerRoute = () => {
-  const [routeData, setRouteData] = useState<any[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+
+  const handleView = (route: Route) => {
+    setSelectedRoute(route);
+    setShowModal(true);
+  };
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedRoute(null);
+  };
 
   useEffect(() => {
-    const fetchTrips = async () => {
+    const fetchRoutes = async () => {
       try {
-        const trips = await getAllTrips();
-        // Chuyển đổi dữ liệu từ trip sang format cho bảng
-        const mapped = trips.map((trip: any) => ({
-          tripCode: trip.tripCode || trip._id,
-          routeId: trip.route?.code || trip.route?._id || "",
-          departureDate: trip.departureDate ? new Date(trip.departureDate).toLocaleDateString() : "",
-          departureTime: trip.departureTime || "",
-          arrivalTime: trip.arrivalTime || "",
-          basePrice: trip.basePrice ? `${trip.basePrice.toLocaleString()} VND` : "",
-          availableSeats: trip.availableSeats ?? "",
-          status: trip.status || "",
-          notes: trip.notes || "",
-        }));
-        setRouteData(mapped);
-      } catch (error) {
-        setRouteData([]);
+        const data = await getAllRoutes();
+        setRoutes(Array.isArray(data) ? data : [data]);
+      } catch (err) {
+        setError("Lỗi khi lấy dữ liệu tuyến đường");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchTrips();
+    fetchRoutes();
   }, []);
 
+  const columns = [
+    { key: "code", label: "Mã tuyến" },
+    { key: "name", label: "Tên tuyến" },
+    {
+      key: "originStation",
+      label: "Điểm đi",
+      render: (value: any) => value && value.length > 0 ? value[0].name : "",
+    },
+    {
+      key: "destinationStation",
+      label: "Điểm đến",
+      render: (value: any) => value && value.length > 0 ? value[0].name : "",
+    },
+    { key: "distanceKm", label: "Km" },
+    {
+      key: "status",
+      label: "Trạng thái",
+      render: (value: string) => (
+        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
+          {statusLabel[value] || value}
+        </span>
+      ),
+    },
+    {
+      key: "action",
+      label: "Action",
+      render: (_: any, row: any) => (
+        <button
+          className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs flex items-center justify-center"
+          title="Xem chi tiết"
+          onClick={() => handleView(row)}
+        >
+          <MapPin size={18} />
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Bus className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Tổng chuyến xe</p>
-              <p className="text-2xl font-bold text-gray-900">{routeData.length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <BarChart3 className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Đang hoạt động</p>
-              <p className="text-2xl font-bold text-gray-900">{routeData.filter(r => r.status === "active").length}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Chuyến hôm nay</p>
-              <p className="text-2xl font-bold text-gray-900">156</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <MapPin className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Điểm đến</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
-            </div>
-          </div>
-        </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">Danh sách tuyến đường</h3>
       </div>
-      {/* Routes Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Danh sách chuyến xe</h3>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-              Thêm chuyến mới
-            </button>
-          </div>
-        </div>
-        <BasicTable columns={columns} data={routeData} rowKey="tripCode" />
-      </div>
+      {loading ? (
+        <div>Đang tải...</div>
+      ) : error ? (
+        <div className="text-red-500">{error}</div>
+      ) : (
+        <BasicTable columns={columns} data={routes} rowKey="_id" />
+      )}
+      {/* Modal xem chi tiết tuyến đường */}
+      {showModal && selectedRoute && (
+        <BasicModal
+          open={showModal}
+          onClose={handleCloseModal}
+          title="Chi tiết tuyến đường"
+          subtitle={<span className="text-gray-500 text-xs">Thông tin chi tiết tuyến đường</span>}
+          icon={<MapPin size={28} />}
+          readonly
+          rows={[
+            [
+              { label: "Mã tuyến", value: selectedRoute.code || "", type: "text", icon: <Hash size={18} /> },
+              { label: "Tên tuyến", value: selectedRoute.name || "", type: "text", icon: <TrendingUp size={18} /> },
+            ],
+            [
+              { label: "Điểm đi", value: selectedRoute.originStation && selectedRoute.originStation[0]?.name || "", type: "text", icon: <MapPin size={18} /> },
+              { label: "Điểm đến", value: selectedRoute.destinationStation && selectedRoute.destinationStation[0]?.name || "", type: "text", icon: <MapPin size={18} /> },
+            ],
+            [
+              { label: "Khoảng cách (km)", value: selectedRoute.distanceKm || "", type: "text", icon: <Clock size={18} /> },
+              { label: "Thời gian dự kiến (phút)", value: selectedRoute.estimatedDuration || "", type: "text", icon: <CalendarIcon size={18} /> },
+            ],
+            [
+              { label: "Trạng thái", value: statusLabel[selectedRoute.status] || selectedRoute.status, type: "text" },
+            ],
+          ]}
+        />
+      )}
     </div>
   );
 };
 
-export default ManagerRoute; 
+export default ManagerRoute;

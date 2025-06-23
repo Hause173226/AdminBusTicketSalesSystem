@@ -1,8 +1,10 @@
 import React from "react";
-import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X } from "lucide-react";
+import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 const menuItems = [
-  { id: "routes", label: "Quản lý tuyến xe", icon: Bus },
+ 
+  { id: "trips", label: "Quản lý chuyến xe", icon: Bus },
+  { id: "routes", label: "Quản lý tuyến đường", icon: MapPin },
   { id: "vehicles", label: "Quản lý xe", icon: Truck },
   { id: "drivers", label: "Quản lý tài xế", icon: UserCheck },
   { id: "users", label: "Quản lý người dùng", icon: Users },
@@ -51,8 +53,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
                 key={item.id}
                 onClick={() => {setActiveMenuItem(item.id);
                   if (item.id === "vehicles") navigate("/bus");
-                  if (item.id === "routes") navigate("/");
+                  if (item.id === "trips") navigate("/");
+                  if (item.id === "routes") navigate("/routes");
                   if (item.id === "users") navigate("/users");
+                  if (item.id === "drivers") navigate("/drivers");
                 }}
                 className={`w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
                   isActive

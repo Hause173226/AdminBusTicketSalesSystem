@@ -25,3 +25,8 @@ export const getTripsByRoute = async (routeId: string): Promise<Trip[]> => {
   const response = await axiosInstance.get(`/trip/route/${routeId}`);
   return response.data;
 };
+
+export const createTrip = async (tripData: Partial<Trip>) => {
+  const response = await axiosInstance.post("/trips", tripData);
+  return response.data;
+};

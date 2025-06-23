@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import ManagerRoute from "./components/manager/managerRoute";
+import ManagerTrip from "./components/manager/managerTrip";
 import ManagerBus from "./components/manager/managerBus";
 import ManagerUser from "./components/manager/managerUser";
+import ManagerDriver from "./components/manager/managerDriver";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
@@ -51,12 +53,22 @@ const AppContent = () => {
           <Routes>
             <Route path="/" element={
               <PrivateRoute>
+                <ManagerTrip />
+              </PrivateRoute>
+            } />
+            <Route path="/routes" element={
+              <PrivateRoute>
                 <ManagerRoute />
               </PrivateRoute>
             } />
             <Route path="/bus" element={
               <PrivateRoute>
                 <ManagerBus />
+              </PrivateRoute>
+            } />
+            <Route path="/drivers" element={
+              <PrivateRoute>
+                <ManagerDriver />
               </PrivateRoute>
             } />
             <Route path="/users" element={

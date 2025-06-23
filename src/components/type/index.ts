@@ -103,3 +103,26 @@ export interface Route {
     status: string;
     availableSeats: number;
   }
+  
+  export interface Driver {
+    _id?: string;
+    fullName: string;
+    phone?: string;
+    email?: string;
+    licenseNumber: string;
+    status?: "active" | "inactive" | "suspended";
+    operator: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }
+  
+  export interface Bus {
+    _id?: string;
+    operator: string; // BusOperator ID
+    licensePlate: string;
+    busType: "standard" | "sleeper" | "limousine" | "vip";
+    seatCount: number;
+    status?: "active" | "maintenance" | "inactive";
+    createdAt?: string;
+    updatedAt?: string;
+  }
