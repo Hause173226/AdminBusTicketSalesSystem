@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { userServices } from "../../services/userServices";
 import BasicTable from "../tables/BasicTable";
 import BasicModal from "../modal/BasicModal";
-import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye, Pencil, Trash2 } from "lucide-react";
 
 const columns = [
   { key: "fullName", label: "Họ tên" },
@@ -12,13 +12,29 @@ const columns = [
     key: "action",
     label: "Action",
     render: (_: any, row: any) => (
-      <button
-        className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs flex items-center justify-center"
-        title="Xem chi tiết"
-        onClick={() => handleView(row)}
-      >
-        <Eye size={18} />
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+          title="Xem chi tiết"
+          onClick={() => handleView(row)}
+        >
+          <Eye size={18} />
+        </button>
+        <button
+          className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+          title="Chỉnh sửa"
+          // onClick={() => handleEdit(row)}
+        >
+          <Pencil size={18} />
+        </button>
+        <button
+          className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+          title="Xoá"
+          // onClick={() => handleDelete(row)}
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
     ),
   },
 ];

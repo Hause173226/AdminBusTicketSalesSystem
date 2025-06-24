@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
-import { getAllBuses, deleteBus } from "../../services/busServices";
+import { getAllBuses, deleteBus, updateBus } from "../../services/busServices";
 import { Bus } from "../type";
 import BasicModal from "../modal/BasicModal";
-import { Bus as BusIcon, Users, Hash, Settings, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Bus as BusIcon, Users, Hash, Settings, CheckCircle, XCircle, Eye, Pencil, Trash2 } from "lucide-react";
+import ConfirmPopover from "../common/ConfirmPopover";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -24,6 +25,10 @@ const ManagerBus = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedBus, setSelectedBus] = useState<Bus | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editBus, setEditBus] = useState<Bus | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchBuses = async () => {
     setLoading(true);
@@ -48,6 +53,39 @@ const ManagerBus = () => {
     setSelectedBus(null);
   };
 
+  const handleEdit = (bus: Bus) => {
+    setEditBus({ ...bus });
+    setShowEditModal(true);
+  };
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditBus(null);
+  };
+  const handleUpdateBus = async () => {
+    if (!editBus || !editBus._id) return;
+    setEditLoading(true);
+    try {
+      await updateBus(editBus._id, editBus);
+      setShowEditModal(false);
+      setEditBus(null);
+      await fetchBuses();
+    } catch (err) {
+      alert("Lỗi khi cập nhật xe bus");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleDelete = async (bus: Bus) => {
+    if (!bus._id) return;
+    try {
+      await deleteBus(bus._id);
+      await fetchBuses();
+      setDeleteConfirmId(null);
+    } catch (err) {
+      alert("Lỗi khi xoá xe bus");
+    }
+  };
+
   const columns = [
     { key: "licensePlate", label: "Biển số" },
     { key: "busType", label: "Loại xe" },
@@ -65,13 +103,42 @@ const ManagerBus = () => {
       key: "action",
       label: "Action",
       render: (_: any, row: any) => (
-        <button
-          className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs flex items-center justify-center"
-          title="Xem chi tiết"
-          onClick={() => handleView(row)}
-        >
-          <Eye size={18} />
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Xem chi tiết"
+            onClick={() => handleView(row)}
+          >
+            <Eye size={18} />
+          </button>
+          <button
+            className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Chỉnh sửa"
+            onClick={() => handleEdit(row)}
+          >
+            <Pencil size={18} />
+          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Xoá"
+              onClick={() => setDeleteConfirmId(row._id!)}
+            >
+              <Trash2 size={18} />
+            </button>
+            <ConfirmPopover
+              open={deleteConfirmId === row._id}
+              message={
+                <>
+                  <div>Bạn có chắc chắn muốn</div>
+                  <div className="font-bold text-red-600 text-base">xoá xe bus này?</div>
+                </>
+              }
+              onConfirm={() => handleDelete(row)}
+              onCancel={() => setDeleteConfirmId(null)}
+            />
+          </div>
+        </div>
       ),
     },
   ];
@@ -105,6 +172,37 @@ const ManagerBus = () => {
             [
               { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Users size={18} /> },
               { label: "Trạng thái", value: statusLabel[selectedBus.status || "inactive"], type: "text" },
+            ],
+          ]}
+        />
+      )}
+      {showEditModal && editBus && (
+        <BasicModal
+          open={showEditModal}
+          onClose={handleCloseEditModal}
+          title="Chỉnh sửa xe bus"
+          subtitle={<span className="text-gray-500 text-xs">Cập nhật thông tin xe bus</span>}
+          icon={<BusIcon size={28} />}
+          readonly={false}
+          onSubmit={handleUpdateBus}
+          submitLabel={editLoading ? "Đang lưu..." : "Cập nhật"}
+          rows={[
+            [
+              { label: "Biển số", value: editBus.licensePlate, type: "text", icon: <Hash size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, licensePlate: e.target.value })) },
+              { label: "Loại xe", value: editBus.busType, type: "select", options: [
+                { label: "Thường", value: "standard" },
+                { label: "Giường nằm", value: "sleeper" },
+                { label: "Limousine", value: "limousine" },
+                { label: "VIP", value: "vip" },
+              ], icon: <Settings size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, busType: e.target.value })) },
+            ],
+            [
+              { label: "Số ghế", value: editBus.seatCount, type: "number", icon: <Users size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, seatCount: e.target.value })) },
+              { label: "Trạng thái", value: editBus.status, type: "select", options: [
+                { label: "Hoạt động", value: "active" },
+                { label: "Bảo trì", value: "maintenance" },
+                { label: "Ngừng hoạt động", value: "inactive" },
+              ], onChange: (e: any) => setEditBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
           ]}
         />

@@ -8,6 +8,7 @@ interface Field {
   placeholder?: string;
   icon?: React.ReactNode;
   colSpan?: number; // 2 nếu muốn chiếm full row
+  onChange?: (e: React.ChangeEvent<any>) => void;
 }
 
 interface BasicModalProps {
@@ -73,6 +74,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                           value={field.value}
                           disabled={readonly}
                           title={field.label}
+                          onChange={field.onChange}
                         >
                           <option value="" disabled hidden>
                             {field.placeholder || `Chọn ${field.label.toLowerCase()}`}
@@ -90,6 +92,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             disabled={readonly}
                             placeholder={field.placeholder || field.label}
                             title={field.label}
+                            onChange={field.onChange}
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -106,6 +109,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             disabled={readonly}
                             placeholder={field.placeholder || field.label}
                             title={field.label}
+                            onChange={field.onChange}
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
-import { getAllDrivers, deleteDriver } from "../../services/driverService";
+import { getAllDrivers, deleteDriver, updateDriver } from "../../services/driverService";
 import { Driver } from "../type";
 import BasicModal from "../modal/BasicModal";
-import { UserCheck, Phone, Mail, Calendar as CalendarIcon, Users, Eye } from "lucide-react";
+import { UserCheck, Phone, Mail, Calendar as CalendarIcon, Users, Eye, Pencil, Trash2 } from "lucide-react";
+import ConfirmPopover from "../common/ConfirmPopover";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -24,6 +25,10 @@ const ManagerDriver = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editDriver, setEditDriver] = useState<Driver | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const fetchDrivers = async () => {
     setLoading(true);
@@ -48,6 +53,39 @@ const ManagerDriver = () => {
     setSelectedDriver(null);
   };
 
+  const handleEdit = (driver: Driver) => {
+    setEditDriver({ ...driver });
+    setShowEditModal(true);
+  };
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditDriver(null);
+  };
+  const handleUpdateDriver = async () => {
+    if (!editDriver || !editDriver._id) return;
+    setEditLoading(true);
+    try {
+      await updateDriver(editDriver._id, editDriver);
+      setShowEditModal(false);
+      setEditDriver(null);
+      await fetchDrivers();
+    } catch (err) {
+      alert("Lỗi khi cập nhật tài xế");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleDelete = async (driver: Driver) => {
+    if (!driver._id) return;
+    try {
+      await deleteDriver(driver._id);
+      await fetchDrivers();
+      setDeleteConfirmId(null);
+    } catch (err) {
+      alert("Lỗi khi xoá tài xế");
+    }
+  };
+
   const columns = [
     { key: "fullName", label: "Họ tên" },
     { key: "phone", label: "Số điện thoại" },
@@ -66,13 +104,42 @@ const ManagerDriver = () => {
       key: "action",
       label: "Action",
       render: (_: any, row: any) => (
-        <button
-          className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs flex items-center justify-center"
-          title="Xem chi tiết"
-          onClick={() => handleView(row)}
-        >
-          <Eye size={18} />
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Xem chi tiết"
+            onClick={() => handleView(row)}
+          >
+            <Eye size={18} />
+          </button>
+          <button
+            className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Chỉnh sửa"
+            onClick={() => handleEdit(row)}
+          >
+            <Pencil size={18} />
+          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Xoá"
+              onClick={() => setDeleteConfirmId(row._id!)}
+            >
+              <Trash2 size={18} />
+            </button>
+            <ConfirmPopover
+              open={deleteConfirmId === row._id}
+              message={
+                <>
+                  <div>Bạn có chắc chắn muốn</div>
+                  <div className="font-bold text-red-600 text-base">xoá tài xế này?</div>
+                </>
+              }
+              onConfirm={() => handleDelete(row)}
+              onCancel={() => setDeleteConfirmId(null)}
+            />
+          </div>
+        </div>
       ),
     },
   ];
@@ -116,6 +183,38 @@ const ManagerDriver = () => {
             ],
             [
               { label: "Nhà xe", value: selectedDriver.operator || "", type: "text", colSpan: 2 },
+            ],
+          ]}
+        />
+      )}
+      {showEditModal && editDriver && (
+        <BasicModal
+          open={showEditModal}
+          onClose={handleCloseEditModal}
+          title="Chỉnh sửa tài xế"
+          subtitle={<span className="text-gray-500 text-xs">Cập nhật thông tin tài xế</span>}
+          icon={<UserCheck size={28} />}
+          readonly={false}
+          onSubmit={handleUpdateDriver}
+          submitLabel={editLoading ? "Đang lưu..." : "Cập nhật"}
+          rows={[
+            [
+              { label: "Họ tên", value: editDriver.fullName, type: "text", icon: <Users size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, fullName: e.target.value })) },
+              { label: "Số điện thoại", value: editDriver.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, phone: e.target.value })) },
+            ],
+            [
+              { label: "Email", value: editDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, email: e.target.value })) },
+              { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => setEditDriver((d: any) => ({ ...d, licenseNumber: e.target.value })) },
+            ],
+            [
+              { label: "Nhà xe", value: editDriver.operator, type: "text", colSpan: 2, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, operator: e.target.value })) },
+            ],
+            [
+              { label: "Trạng thái", value: editDriver.status, type: "select", options: [
+                { label: "Hoạt động", value: "active" },
+                { label: "Tạm đình chỉ", value: "suspended" },
+                { label: "Ngừng hoạt động", value: "inactive" },
+              ], onChange: (e: any) => setEditDriver((d: any) => ({ ...d, status: e.target.value })) },
             ],
           ]}
         />

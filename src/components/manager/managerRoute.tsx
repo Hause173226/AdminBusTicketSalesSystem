@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { getAllRoutes } from "../../services/routeServices";
+import { getAllRoutes, createRoute, updateRoute, deleteRoute } from "../../services/routeServices";
+import { getAllStations } from "../../services/stationServices";
 import BasicTable from "../tables/BasicTable";
 import BasicModal from "../modal/BasicModal";
-import { MapPin, Hash, Clock, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import { MapPin, Hash, Clock, TrendingUp, Calendar as CalendarIcon, Bus, Eye, Pencil, Trash2 } from "lucide-react";
 import { Route } from "../type";
+import { Station } from "../type";
+import ConfirmPopover from "../common/ConfirmPopover";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -21,6 +24,24 @@ const ManagerRoute = () => {
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [stations, setStations] = useState<Station[]>([]);
+  const [newRoute, setNewRoute] = useState<any>({
+    code: "",
+    name: "",
+    originStation: "",
+    destinationStation: "",
+    distanceKm: "",
+    estimatedDuration: "",
+    status: "active",
+  });
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editRoute, setEditRoute] = useState<any>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const handleView = (route: Route) => {
     setSelectedRoute(route);
@@ -31,19 +52,122 @@ const ManagerRoute = () => {
     setSelectedRoute(null);
   };
 
+  const fetchRoutes = async () => {
+    setLoading(true);
+    try {
+      const data = await getAllRoutes();
+      setRoutes(Array.isArray(data) ? data : [data]);
+    } catch (err) {
+      setError("Lỗi khi lấy dữ liệu tuyến đường");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchRoutes = async () => {
-      try {
-        const data = await getAllRoutes();
-        setRoutes(Array.isArray(data) ? data : [data]);
-      } catch (err) {
-        setError("Lỗi khi lấy dữ liệu tuyến đường");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRoutes();
   }, []);
+
+  useEffect(() => {
+    const fetchStations = async () => {
+      try {
+        const data = await getAllStations();
+        setStations(Array.isArray(data) ? data : [data]);
+      } catch (err) {
+        // ignore
+      }
+    };
+    fetchStations();
+  }, []);
+
+  const handleOpenCreateModal = () => {
+    setShowCreateModal(true);
+    setCreateError("");
+    setNewRoute({
+      code: "",
+      name: "",
+      originStation: "",
+      destinationStation: "",
+      distanceKm: "",
+      estimatedDuration: "",
+      status: "active",
+    });
+  };
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+  };
+
+  const handleCreateRoute = async () => {
+    setCreateLoading(true);
+    setCreateError("");
+    try {
+      const payload = {
+        ...newRoute,
+        distanceKm: Number(newRoute.distanceKm),
+        estimatedDuration: Number(newRoute.estimatedDuration),
+        originStation: newRoute.originStation,
+        destinationStation: newRoute.destinationStation,
+      };
+      await createRoute(payload);
+      setShowCreateModal(false);
+      setNewRoute({
+        code: "",
+        name: "",
+        originStation: "",
+        destinationStation: "",
+        distanceKm: "",
+        estimatedDuration: "",
+        status: "active",
+      });
+      await fetchRoutes();
+    } catch (err) {
+      setCreateError("Lỗi khi tạo tuyến đường mới");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const handleEdit = (route: any) => {
+    setEditRoute({ ...route });
+    setShowEditModal(true);
+    setEditError("");
+  };
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setEditRoute(null);
+  };
+  const handleUpdateRoute = async () => {
+    if (!editRoute || !editRoute._id) return;
+    setEditLoading(true);
+    setEditError("");
+    try {
+      const payload = {
+        ...editRoute,
+        distanceKm: Number(editRoute.distanceKm),
+        estimatedDuration: Number(editRoute.estimatedDuration),
+        originStation: editRoute.originStation,
+        destinationStation: editRoute.destinationStation,
+      };
+      await updateRoute(editRoute._id, payload);
+      setShowEditModal(false);
+      setEditRoute(null);
+      await fetchRoutes();
+    } catch (err) {
+      setEditError("Lỗi khi cập nhật tuyến đường");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDelete = async (route: any) => {
+    try {
+      await deleteRoute(route._id);
+      await fetchRoutes();
+      setDeleteConfirmId(null);
+    } catch (err) {
+      alert("Lỗi khi xoá tuyến đường");
+    }
+  };
 
   const columns = [
     { key: "code", label: "Mã tuyến" },
@@ -51,12 +175,22 @@ const ManagerRoute = () => {
     {
       key: "originStation",
       label: "Điểm đi",
-      render: (value: any) => value && value.length > 0 ? value[0].name : "",
+      render: (value: any) => {
+        if (!value) return "";
+        if (Array.isArray(value)) return (value[0] as Station)?.name || (value[0] as Station)?._id || "";
+        if (typeof value === "object") return value.name || value._id || "";
+        return value; // fallback (maybe string id)
+      },
     },
     {
       key: "destinationStation",
       label: "Điểm đến",
-      render: (value: any) => value && value.length > 0 ? value[0].name : "",
+      render: (value: any) => {
+        if (!value) return "";
+        if (Array.isArray(value)) return (value[0] as Station)?.name || (value[0] as Station)?._id || "";
+        if (typeof value === "object") return value.name || value._id || "";
+        return value; // fallback (maybe string id)
+      },
     },
     { key: "distanceKm", label: "Km" },
     {
@@ -72,13 +206,42 @@ const ManagerRoute = () => {
       key: "action",
       label: "Action",
       render: (_: any, row: any) => (
-        <button
-          className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs flex items-center justify-center"
-          title="Xem chi tiết"
-          onClick={() => handleView(row)}
-        >
-          <MapPin size={18} />
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <button
+            className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Xem chi tiết"
+            onClick={() => handleView(row)}
+          >
+            <Eye size={18} />
+          </button>
+          <button
+            className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+            title="Chỉnh sửa"
+            onClick={() => handleEdit(row)}
+          >
+            <Pencil size={18} />
+          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Xoá"
+              onClick={() => setDeleteConfirmId(row._id)}
+            >
+              <Trash2 size={18} />
+            </button>
+            <ConfirmPopover
+              open={deleteConfirmId === row._id}
+              message={
+                <>
+                  <div>Bạn có chắc chắn muốn</div>
+                  <div className="font-bold text-red-600 text-base">xoá tuyến đường này?</div>
+                </>
+              }
+              onConfirm={() => handleDelete(row)}
+              onCancel={() => setDeleteConfirmId(null)}
+            />
+          </div>
+        </div>
       ),
     },
   ];
@@ -87,6 +250,12 @@ const ManagerRoute = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách tuyến đường</h3>
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          onClick={handleOpenCreateModal}
+        >
+          Thêm tuyến mới
+        </button>
       </div>
       {loading ? (
         <div>Đang tải...</div>
@@ -110,9 +279,9 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: selectedRoute.name || "", type: "text", icon: <TrendingUp size={18} /> },
             ],
             [
-              { label: "Điểm đi", value: selectedRoute.originStation && selectedRoute.originStation[0]?.name || "", type: "text", icon: <MapPin size={18} /> },
-              { label: "Điểm đến", value: selectedRoute.destinationStation && selectedRoute.destinationStation[0]?.name || "", type: "text", icon: <MapPin size={18} /> },
-            ],
+              { label: "Điểm đi", value: selectedRoute.originStation && selectedRoute.originStation.length > 0 ? selectedRoute.originStation.map((s) => s.name).join(", ") : "", type: "text", icon: <MapPin size={18} /> },
+              { label: "Điểm đến", value: selectedRoute.destinationStation && selectedRoute.destinationStation.length > 0 ? selectedRoute.destinationStation.map((s) => s.name).join(", ") : "", type: "text", icon: <MapPin size={18} /> },
+           ],
             [
               { label: "Khoảng cách (km)", value: selectedRoute.distanceKm || "", type: "text", icon: <Clock size={18} /> },
               { label: "Thời gian dự kiến (phút)", value: selectedRoute.estimatedDuration || "", type: "text", icon: <CalendarIcon size={18} /> },
@@ -121,6 +290,66 @@ const ManagerRoute = () => {
               { label: "Trạng thái", value: statusLabel[selectedRoute.status] || selectedRoute.status, type: "text" },
             ],
           ]}
+        />
+      )}
+      {/* Modal tạo mới tuyến đường */}
+      {showCreateModal && (
+        <BasicModal
+          open={showCreateModal}
+          onClose={handleCloseCreateModal}
+          title="Tạo tuyến đường mới"
+          subtitle={<span className="text-gray-500 text-xs">Nhập thông tin tuyến đường</span>}
+          icon={<MapPin size={28} />}
+          readonly={false}
+          onSubmit={handleCreateRoute}
+          submitLabel={createLoading ? "Đang lưu..." : "Tạo mới"}
+          rows={[
+            [
+              { label: "Mã tuyến", value: newRoute.code, type: "text", icon: <Hash size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, code: e.target.value })) },
+              { label: "Tên tuyến", value: newRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, name: e.target.value })) },
+            ],
+            [
+              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, originStation: e.target.value })) },
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, destinationStation: e.target.value })) },
+            ],
+            [
+              { label: "Khoảng cách (km)", value: newRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },
+              { label: "Thời gian dự kiến (phút)", value: newRoute.estimatedDuration, type: "number", icon: <CalendarIcon size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, estimatedDuration: e.target.value })) },
+            ],
+            [
+              { label: "Trạng thái", value: newRoute.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setNewRoute((r: any) => ({ ...r, status: e.target.value })) },
+            ],
+          ].map(row => row.map(field => ({ ...field, onChange: field.onChange, value: field.value })))}
+        />
+      )}
+      {/* Modal chỉnh sửa tuyến đường */}
+      {showEditModal && editRoute && (
+        <BasicModal
+          open={showEditModal}
+          onClose={handleCloseEditModal}
+          title="Chỉnh sửa tuyến đường"
+          subtitle={<span className="text-gray-500 text-xs">Cập nhật thông tin tuyến đường</span>}
+          icon={<MapPin size={28} />}
+          readonly={false}
+          onSubmit={handleUpdateRoute}
+          submitLabel={editLoading ? "Đang lưu..." : "Lưu thay đổi"}
+          rows={[
+            [
+              { label: "Mã tuyến", value: editRoute.code, type: "text", icon: <Hash size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, code: e.target.value })) },
+              { label: "Tên tuyến", value: editRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, name: e.target.value })) },
+            ],
+            [
+              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, originStation: e.target.value })) },
+              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, destinationStation: e.target.value })) },
+            ],
+            [
+              { label: "Khoảng cách (km)", value: editRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },
+              { label: "Thời gian dự kiến (phút)", value: editRoute.estimatedDuration, type: "number", icon: <CalendarIcon size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, estimatedDuration: e.target.value })) },
+            ],
+            [
+              { label: "Trạng thái", value: editRoute.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setEditRoute((r: any) => ({ ...r, status: e.target.value })) },
+            ],
+          ].map(row => row.map(field => ({ ...field, onChange: field.onChange, value: field.value })))}
         />
       )}
     </div>

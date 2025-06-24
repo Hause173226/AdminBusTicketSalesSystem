@@ -10,10 +10,11 @@ import ManagerDriver from "./components/manager/managerDriver";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
+import AdminProfile from "./components/AdminProfile";
 
 const AppContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeMenuItem, setActiveMenuItem] = useState("routes");
+  const [activeMenuItem, setActiveMenuItem] = useState("trip");
   const { user, isAdmin } = useAuth();
   
   const toggleSidebar = () => {
@@ -74,6 +75,11 @@ const AppContent = () => {
             <Route path="/users" element={
               <PrivateRoute>
                 <ManagerUser />
+              </PrivateRoute>
+            } />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <AdminProfile />
               </PrivateRoute>
             } />
             <Route path="*" element={<Navigate to="/" />} />
