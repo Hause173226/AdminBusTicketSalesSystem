@@ -7,6 +7,6 @@ const api = axios.create({
 
 export const userServices = {
   getUser: () => {
-    return api.get("/user");
+    return api.get("/users");
   },
 };
