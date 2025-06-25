@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Bus, BarChart3, Calendar, MapPin, Eye, Pencil, Trash2 } from "lucide-react";
+import { Bus, BarChart3, Calendar, MapPin, Eye, Pencil, Trash2, CheckCircle, Clock, XCircle, Loader, DollarSign, Users, Info } from "lucide-react";
 import BasicTable from "../tables/BasicTable";
 import { getAllTrips, createTrip, updateTrip, deleteTrip } from "../../services/tripServices";
 import { getAllRoutes } from "../../services/routeServices";
@@ -7,12 +7,28 @@ import { getAllBuses } from "../../services/busServices";
 import BasicModal from "../modal/BasicModal";
 import { Calendar as CalendarIcon } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
+import { toast } from "react-toastify";
+import SearchInput from ".//SearchInput";
 
 const statusColor: Record<string, string> = {
-  "scheduled": "bg-blue-100 text-blue-800",
-  "active": "bg-green-100 text-green-800",
-  "inactive": "bg-gray-100 text-gray-800",
-  "maintenance": "bg-yellow-100 text-yellow-800",
+  "scheduled": "bg-blue-100 text-blue-700 border border-blue-300 font-bold",
+  "in_progress": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
+  "completed": "bg-green-100 text-green-700 border border-green-300 font-bold",
+  "cancelled": "bg-red-100 text-red-700 border border-red-300 font-bold",
+};
+
+const statusIcon: Record<string, JSX.Element> = {
+  "scheduled": <Clock size={16} className="inline mr-1" />,
+  "in_progress": <Loader size={16} className="inline mr-1 animate-spin" />,
+  "completed": <CheckCircle size={16} className="inline mr-1" />,
+  "cancelled": <XCircle size={16} className="inline mr-1" />,
+};
+
+const statusLabel: Record<string, string> = {
+  "scheduled": "Đã lên lịch",
+  "in_progress": "Đang chạy",
+  "completed": "Hoàn thành",
+  "cancelled": "Đã huỷ",
 };
 
 const ManagerTrip = () => {
@@ -41,6 +57,7 @@ const ManagerTrip = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [searchRoute, setSearchRoute] = useState("");
 
   const handleView = (trip: any) => {
     setSelectedTrip(trip);
@@ -63,14 +80,18 @@ const ManagerTrip = () => {
 
   const columns = [
     { key: "tripCode", label: "Mã chuyến" },
-    { key: "routeId", label: "Tuyến" },
-    { key: "departureDate", label: "Ngày xuất phát" },
+    { 
+      key: "routeName", 
+      label: "Tuyến",
+      render: (_: any, row: any) => row.route?.name || row.route?.code || ""
+    },
+    { key: "departureDateDisplay", label: "Ngày xuất phát" },
     {
       key: "status",
       label: "Trạng thái",
       render: (value: string) => (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
-          {value}
+        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
+          {statusIcon[value]} {statusLabel[value] || value}
         </span>
       ),
     },
@@ -160,15 +181,29 @@ const ManagerTrip = () => {
     fetchRoutesAndBuses();
   }, []);
 
+  // Thêm hàm formatTime để chuẩn hóa giờ sang HH:mm
+  const formatTime = (time: string) => {
+    if (!time) return "";
+    if (/^\d{2}:\d{2}$/.test(time)) return time;
+    if (/^\d{1,2}$/.test(time)) return `${time.padStart(2, '0')}:00`;
+    return time;
+  };
+
   const handleCreateTrip = async () => {
     setCreateLoading(true);
     setCreateError("");
     try {
       const payload = {
         ...newTrip,
+        route: typeof newTrip.route === 'object' ? newTrip.route._id : newTrip.route,
+        bus: typeof newTrip.bus === 'object' ? newTrip.bus._id : newTrip.bus,
         basePrice: Number(newTrip.basePrice),
         availableSeats: Number(newTrip.availableSeats),
+        departureTime: formatTime(newTrip.departureTime),
+        arrivalTime: formatTime(newTrip.arrivalTime),
+        status: newTrip.status || 'scheduled',
       };
+      console.log("Payload gửi lên:", payload);
       await createTrip(payload);
       setShowCreateModal(false);
       setNewTrip({
@@ -183,10 +218,10 @@ const ManagerTrip = () => {
         status: "scheduled",
         notes: "",
       });
-      // Reload trips
       await fetchTrips();
-    } catch (err) {
+    } catch (err: any) {
       setCreateError("Lỗi khi tạo chuyến xe mới");
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi tạo chuyến xe mới");
     } finally {
       setCreateLoading(false);
     }
@@ -199,16 +234,21 @@ const ManagerTrip = () => {
     try {
       const payload = {
         ...editTrip,
+        route: typeof editTrip.route === 'object' ? editTrip.route._id : editTrip.route,
+        bus: typeof editTrip.bus === 'object' ? editTrip.bus._id : editTrip.bus,
         basePrice: Number(editTrip.basePrice),
         availableSeats: Number(editTrip.availableSeats),
+        departureTime: formatTime(editTrip.departureTime),
+        arrivalTime: formatTime(editTrip.arrivalTime),
+        status: editTrip.status || 'scheduled',
       };
       await updateTrip(editTrip._id, payload);
       setShowEditModal(false);
       setEditTrip(null);
-      // Reload trips
       await fetchTrips();
-    } catch (err) {
+    } catch (err: any) {
       setEditError("Lỗi khi cập nhật chuyến xe");
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật chuyến xe");
     } finally {
       setEditLoading(false);
     }
@@ -219,10 +259,14 @@ const ManagerTrip = () => {
       await deleteTrip(trip._id);
       await fetchTrips();
       setDeleteConfirmId(null);
-    } catch (err) {
-      alert("Lỗi khi xoá chuyến xe");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá chuyến xe");
     }
   };
+
+  const filteredRouteData = routeData.filter(trip =>
+    trip.route?.name?.toLowerCase().includes(searchRoute.toLowerCase())
+  );
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -278,12 +322,17 @@ const ManagerTrip = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Danh sách chuyến xe</h3>
+            <SearchInput
+              value={searchRoute}
+              onChange={e => setSearchRoute(e.target.value)}
+              placeholder="Tìm kiếm tuyến..."
+            />
             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium" onClick={() => setShowCreateModal(true)}>
               Thêm chuyến mới
             </button>
           </div>
         </div>
-        <BasicTable columns={columns} data={routeData} rowKey="tripCode" />
+        <BasicTable columns={columns} data={filteredRouteData} rowKey="tripCode" />
       </div>
       {/* Modal xem chi tiết chuyến xe */}
       {showModal && selectedTrip && (
@@ -292,29 +341,34 @@ const ManagerTrip = () => {
           onClose={handleCloseModal}
           title="Chi tiết chuyến xe"
           subtitle="Thông tin chi tiết chuyến xe"
+          icon={<Bus size={28} />}
           readonly
           rows={[
             [
-              { label: "Mã chuyến", value: selectedTrip.tripCode || "", type: "text" },
-              { label: "Tuyến", value: selectedTrip.routeId || "", type: "text" },
+              { label: "Mã chuyến", value: selectedTrip.tripCode || "", type: "text", icon: <Info size={16} /> },
+              { label: "Tuyến", value: selectedTrip.route.name || "", type: "text", icon: <Bus size={16} /> },
             ],
             [
-              { label: "Ngày xuất phát", value: selectedTrip.departureDateDisplay || "", type: "text", icon: <CalendarIcon size={18} /> },
-               { label: "Giá vé", value: selectedTrip.basePriceDisplay || "", type: "text" },
-            ],
-            [ 
-            { label: "Giờ đi", value: selectedTrip.departureTime || "", type: "text" },
-              { label: "Giờ đến", value: selectedTrip.arrivalTime || "", type: "text" },
-             
+              { label: "Điểm đi", value: selectedTrip.route?.originStation?.name || "", type: "text", icon: <MapPin size={16} /> },
+              { label: "Điểm đến", value: selectedTrip.route?.destinationStation?.name || "", type: "text", icon: <MapPin size={16} /> },
             ],
             [
-              { label: "Ghế còn", value: selectedTrip.availableSeats ?? "", type: "text" },
-              { label: "Trạng thái", value: selectedTrip.status || "", type: "text" },
+              { label: "Ngày xuất phát", value: selectedTrip.departureDateDisplay || "", type: "text", icon: <CalendarIcon size={16} /> },
+              { label: "Giá vé", value: selectedTrip.basePriceDisplay || "", type: "text", icon: <DollarSign size={16} /> },
             ],
             [
-              { label: "Ghi chú", value: selectedTrip.notes || "", type: "text", colSpan: 2 },
+              { label: "Giờ đi", value: selectedTrip.departureTime || "", type: "text", icon: <Clock size={16} /> },
+              { label: "Giờ đến", value: selectedTrip.arrivalTime || "", type: "text", icon: <Clock size={16} /> },
+            ],
+            [
+              { label: "Ghế còn", value: selectedTrip.availableSeats ?? "", type: "text", icon: <Users size={16} /> },
+              { label: "Trạng thái", value: statusLabel[selectedTrip.status] || selectedTrip.status, type: "text" },
+            ],
+            [
+              { label: "Ghi chú", value: selectedTrip.notes || "", type: "text", icon: <Info size={16} />, colSpan: 2 },
             ],
           ]}
+          updatedAt={selectedTrip.updatedAt}
         />
       )}
       {/* Modal tạo mới chuyến xe */}
@@ -324,16 +378,28 @@ const ManagerTrip = () => {
           onClose={() => setShowCreateModal(false)}
           title="Tạo chuyến xe mới"
           subtitle="Nhập thông tin chuyến xe"
+          icon={<Bus size={28} />}
           readonly={false}
           onSubmit={handleCreateTrip}
           submitLabel={createLoading ? "Đang lưu..." : "Tạo mới"}
           rows={[
             [
-              { label: "Mã chuyến", value: newTrip.tripCode, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
-              { label: "Tuyến", value: newTrip.route, type: "select", options: routes.map((r) => ({ label: r.name || r.code, value: r._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, route: e.target.value })) },
+              { label: "Tuyến", value: newTrip.route, type: "select", options: routes.map((r) => ({
+                label: `${r.originStation?.name || ""} - ${r.destinationStation?.name || ""} (${r.name || r.code})`,
+                value: r._id
+              })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, route: e.target.value })),  colSpan: 2 },
             ],
             [
+              { label: "Mã chuyến", value: newTrip.tripCode, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
               { label: "Xe", value: newTrip.bus, type: "select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, bus: e.target.value })) },
+            ],
+            [
+              { label: "Trạng thái", value: newTrip.status, type: "select", options: [
+                { label: "Đã lên lịch", value: "scheduled" },
+                { label: "Đang chạy", value: "in_progress" },
+                { label: "Hoàn thành", value: "completed" },
+                { label: "Đã huỷ", value: "cancelled" },
+              ], onChange: (e: any) => setNewTrip((r: any) => ({ ...r, status: e.target.value })) },
               { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
             ],
             [
@@ -344,14 +410,7 @@ const ManagerTrip = () => {
               { label: "Giá vé", value: newTrip.basePrice, type: "number", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, basePrice: e.target.value })) },
               { label: "Ghế còn", value: newTrip.availableSeats, type: "number", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, availableSeats: e.target.value })) },
             ],
-            [
-              { label: "Trạng thái", value: newTrip.status, type: "select", options: [
-                { label: "Đã lên lịch", value: "scheduled" },
-                { label: "Đang hoạt động", value: "active" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-                { label: "Bảo trì", value: "maintenance" },
-              ], onChange: (e: any) => setNewTrip((r: any) => ({ ...r, status: e.target.value })) },
-            ],
+          
             [
               { label: "Ghi chú", value: newTrip.notes, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
             ],
@@ -365,16 +424,28 @@ const ManagerTrip = () => {
           onClose={handleCloseEditModal}
           title="Chỉnh sửa chuyến xe"
           subtitle="Cập nhật thông tin chuyến xe"
+          icon={<Bus size={28} />}
           readonly={false}
           onSubmit={handleUpdateTrip}
           submitLabel={editLoading ? "Đang lưu..." : "Cập nhật"}
           rows={[
             [
-              { label: "Mã chuyến", value: editTrip.tripCode, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
-              { label: "Tuyến", value: editTrip.route, type: "select", options: routes.map((r) => ({ label: r.name || r.code, value: r._id })), onChange: (e: any) => setEditTrip((r: any) => ({ ...r, route: e.target.value })) },
+              { label: "Tuyến", value: editTrip.route, type: "select", options: routes.map((r) => ({
+                label: `${r.originStation?.name || ""} - ${r.destinationStation?.name || ""} (${r.name || r.code})`,
+                value: r._id
+              })), onChange: (e: any) => setEditTrip((r: any) => ({ ...r, route: e.target.value })), colSpan: 2 },
             ],
             [
+              { label: "Mã chuyến", value: editTrip.tripCode, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
               { label: "Xe", value: editTrip.bus, type: "select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => setEditTrip((r: any) => ({ ...r, bus: e.target.value })) },
+            ],
+            [
+              { label: "Trạng thái", value: editTrip.status, type: "select", options: [
+                { label: "Đã lên lịch", value: "scheduled" },
+                { label: "Đang chạy", value: "in_progress" },
+                { label: "Hoàn thành", value: "completed" },
+                { label: "Đã huỷ", value: "cancelled" },
+              ], onChange: (e: any) => setEditTrip((r: any) => ({ ...r, status: e.target.value })) },
               { label: "Ngày xuất phát", value: editTrip.departureDate ? new Date(editTrip.departureDate).toISOString().slice(0, 10) : "", type: "date", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
             ],
             [
@@ -386,17 +457,10 @@ const ManagerTrip = () => {
               { label: "Ghế còn", value: editTrip.availableSeats, type: "number", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, availableSeats: e.target.value })) },
             ],
             [
-              { label: "Trạng thái", value: editTrip.status, type: "select", options: [
-                { label: "Đã lên lịch", value: "scheduled" },
-                { label: "Đang hoạt động", value: "active" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-                { label: "Bảo trì", value: "maintenance" },
-              ], onChange: (e: any) => setEditTrip((r: any) => ({ ...r, status: e.target.value })) },
-            ],
-            [
               { label: "Ghi chú", value: editTrip.notes, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
             ],
           ]}
+          updatedAt={editTrip.updatedAt}
         />
       )}
     </div>

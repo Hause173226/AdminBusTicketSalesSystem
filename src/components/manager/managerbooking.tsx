@@ -71,7 +71,7 @@ const ManagerBooking: React.FC = () => {
 
   useEffect(() => {
     bookingService.getAllBookings().then((data) => {
-      setBookings(data);
+      setBookings(Array.isArray(data.data) ? data.data : []);
       setLoading(false);
     });
   }, []);
@@ -117,7 +117,7 @@ const ManagerBooking: React.FC = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={bookings} rowKey="_id" />
+        <BasicTable columns={columns} data={Array.isArray(bookings) ? bookings : []} rowKey="_id" />
       )}
       {modalOpen && selectedBooking && (
         <BasicModal

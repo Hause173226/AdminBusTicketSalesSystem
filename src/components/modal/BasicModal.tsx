@@ -21,6 +21,7 @@ interface BasicModalProps {
   readonly?: boolean;
   onSubmit?: () => void;
   submitLabel?: string;
+  updatedAt?: string;
 }
 
 const BasicModal: React.FC<BasicModalProps> = ({
@@ -33,6 +34,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
   readonly = true,
   onSubmit,
   submitLabel = "Lưu",
+  updatedAt,
 }) => {
   if (!open) return null;
   return (
@@ -42,7 +44,9 @@ const BasicModal: React.FC<BasicModalProps> = ({
         <div className="flex items-center mb-2">
           {icon && <div className="mr-3 text-3xl">{icon}</div>}
           <div>
-            <h2 className="text-2xl font-bold leading-tight">{title}</h2>
+            <h2 className="text-2xl font-bold leading-tight text-blue-700 drop-shadow-md border-b-2 border-blue-200 pb-1">
+              {title}
+            </h2>
             {subtitle && <div className="text-gray-500 text-sm mt-1">{subtitle}</div>}
           </div>
           <button onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-700 text-2xl font-bold">×</button>
@@ -124,22 +128,29 @@ const BasicModal: React.FC<BasicModalProps> = ({
               </div>
             ))}
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-            >
-              Đóng
-            </button>
-            {!readonly && onSubmit && (
+          <div className="flex items-center justify-between gap-2">
+            {updatedAt ? (
+              <div className="text-xs text-gray-500">
+                {`Cập nhật lần cuối: ${new Date(updatedAt).toLocaleString('vi-VN')}`}
+              </div>
+            ) : <div />}
+            <div className="flex gap-3">
               <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 bg-red-100 text-red-700 font-semibold rounded hover:bg-red-200 transition-colors shadow"
               >
-                {submitLabel}
+                Đóng
               </button>
-            )}
+              {!readonly && onSubmit && (
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  {submitLabel}
+                </button>
+              )}
+            </div>
           </div>
         </form>
       </div>

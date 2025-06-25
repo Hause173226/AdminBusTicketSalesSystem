@@ -12,6 +12,8 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminProfile from "./components/AdminProfile";
 import ManagerBooking from "./components/manager/managerbooking";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Logout = () => {
   const { logout } = useAuth();
@@ -119,6 +121,7 @@ function App() {
       <AuthProvider>
         <AppContent />
       </AuthProvider>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
     </Router>
   );
 }

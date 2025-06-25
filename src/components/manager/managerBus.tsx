@@ -5,6 +5,7 @@ import { Bus } from "../type";
 import BasicModal from "../modal/BasicModal";
 import { Bus as BusIcon, Users, Hash, Settings, CheckCircle, XCircle, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
+import { toast } from "react-toastify";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -69,8 +70,8 @@ const ManagerBus = () => {
       setShowEditModal(false);
       setEditBus(null);
       await fetchBuses();
-    } catch (err) {
-      alert("Lỗi khi cập nhật xe bus");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật xe bus");
     } finally {
       setEditLoading(false);
     }
@@ -81,8 +82,8 @@ const ManagerBus = () => {
       await deleteBus(bus._id);
       await fetchBuses();
       setDeleteConfirmId(null);
-    } catch (err) {
-      alert("Lỗi khi xoá xe bus");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá xe bus");
     }
   };
 

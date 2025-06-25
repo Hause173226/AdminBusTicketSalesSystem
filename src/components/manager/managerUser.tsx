@@ -4,6 +4,7 @@ import BasicTable from "../tables/BasicTable";
 import BasicModal from "../modal/BasicModal";
 import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
+import { toast } from "react-toastify";
 
 const columns = [
   { key: "fullName", label: "Họ tên" },
@@ -101,8 +102,8 @@ const ManagerUser = () => {
       setUsers(users => users.map(u => (u._id === editUser._id ? { ...u, ...payload } : u)));
       setShowEditModal(false);
       setEditUser(null);
-    } catch (err) {
-      alert("Lỗi khi cập nhật người dùng");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật người dùng");
     } finally {
       setLoading(false);
     }
@@ -114,8 +115,8 @@ const ManagerUser = () => {
       await userServices.deleteUser(deletePopover.user._id);
       setUsers(users => users.filter(u => u._id !== deletePopover.user._id));
       setDeletePopover({ open: false, user: null });
-    } catch (err) {
-      alert("Lỗi khi xoá người dùng");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá người dùng");
     } finally {
       setLoading(false);
     }

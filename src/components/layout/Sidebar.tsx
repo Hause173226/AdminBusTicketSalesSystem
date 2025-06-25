@@ -34,7 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200 relative">
           <motion.h1
-            className="text-2xl font-extrabold text-white tracking-wide drop-shadow-lg"
+            className="text-2xl font-extrabold tracking-wide drop-shadow-lg bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 text-transparent bg-clip-text"
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
             style={{ textAlign: 'center', width: '100%' }}

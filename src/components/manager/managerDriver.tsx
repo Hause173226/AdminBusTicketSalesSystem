@@ -5,6 +5,7 @@ import { Driver } from "../type";
 import BasicModal from "../modal/BasicModal";
 import { UserCheck, Phone, Mail, Calendar as CalendarIcon, Users, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
+import { toast } from "react-toastify";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-800",
@@ -69,8 +70,8 @@ const ManagerDriver = () => {
       setShowEditModal(false);
       setEditDriver(null);
       await fetchDrivers();
-    } catch (err) {
-      alert("Lỗi khi cập nhật tài xế");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật tài xế");
     } finally {
       setEditLoading(false);
     }
@@ -81,8 +82,8 @@ const ManagerDriver = () => {
       await deleteDriver(driver._id);
       await fetchDrivers();
       setDeleteConfirmId(null);
-    } catch (err) {
-      alert("Lỗi khi xoá tài xế");
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá tài xế");
     }
   };
 
