@@ -44,4 +44,10 @@ export const userServices = {
       newPassword,
     });
   },
+  updateUser: (id: string, data: any) => {
+    return axiosInstance.put(`/users/${id}`, data);
+  },
+  deleteUser: (id: string) => {
+    return axiosInstance.delete(`/users/${id}`);
+  },
 };

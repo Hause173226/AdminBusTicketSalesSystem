@@ -128,7 +128,11 @@ const ManagerRoute = () => {
   };
 
   const handleEdit = (route: any) => {
-    setEditRoute({ ...route });
+    setEditRoute({
+      ...route,
+      originStation: route.originStation?._id || route.originStation,
+      destinationStation: route.destinationStation?._id || route.destinationStation,
+    });
     setShowEditModal(true);
     setEditError("");
   };
@@ -169,28 +173,48 @@ const ManagerRoute = () => {
     }
   };
 
+  const getCityByStationId = (stationId: string) => {
+    const station = stations.find((s) => s._id === stationId);
+    return station?.address.city || "";
+  };
+
+  const updateRouteName = (originId: string, destinationId: string) => {
+    const city1 = getCityByStationId(originId);
+    const city2 = getCityByStationId(destinationId);
+    return city1 && city2 ? `${city1} - ${city2}` : "";
+  };
+
+  const getCityCode = (city: string) => {
+    if (!city) return "";
+    return city
+      .split(" ")
+      .map(word => word[0]?.toUpperCase() || "")
+      .join("");
+  };
+
+  const generateRouteCode = (city1: string, city2: string, existingCodes: string[]) => {
+    let baseCode = `${getCityCode(city1)}-${getCityCode(city2)}`;
+    let code = baseCode;
+    let counter = 1;
+    while (existingCodes.includes(code)) {
+      code = `${baseCode}${counter.toString().padStart(2, '0')}`;
+      counter++;
+    }
+    return code;
+  };
+
   const columns = [
     { key: "code", label: "Mã tuyến" },
     { key: "name", label: "Tên tuyến" },
     {
       key: "originStation",
       label: "Điểm đi",
-      render: (value: any) => {
-        if (!value) return "";
-        if (Array.isArray(value)) return (value[0] as Station)?.name || (value[0] as Station)?._id || "";
-        if (typeof value === "object") return value.name || value._id || "";
-        return value; // fallback (maybe string id)
-      },
+      render: (value: any) => value && value.name ? value.name : "",
     },
     {
       key: "destinationStation",
       label: "Điểm đến",
-      render: (value: any) => {
-        if (!value) return "";
-        if (Array.isArray(value)) return (value[0] as Station)?.name || (value[0] as Station)?._id || "";
-        if (typeof value === "object") return value.name || value._id || "";
-        return value; // fallback (maybe string id)
-      },
+      render: (value: any) => value && value.name ? value.name : "",
     },
     { key: "distanceKm", label: "Km" },
     {
@@ -279,8 +303,8 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: selectedRoute.name || "", type: "text", icon: <TrendingUp size={18} /> },
             ],
             [
-              { label: "Điểm đi", value: selectedRoute.originStation && selectedRoute.originStation.length > 0 ? selectedRoute.originStation.map((s) => s.name).join(", ") : "", type: "text", icon: <MapPin size={18} /> },
-              { label: "Điểm đến", value: selectedRoute.destinationStation && selectedRoute.destinationStation.length > 0 ? selectedRoute.destinationStation.map((s) => s.name).join(", ") : "", type: "text", icon: <MapPin size={18} /> },
+              { label: "Điểm đi", value: Array.isArray(selectedRoute.originStation) ? ((selectedRoute.originStation[0] as any)?.name || "") : (selectedRoute.originStation && (selectedRoute.originStation as any).name ? (selectedRoute.originStation as any).name : ""), type: "text", icon: <MapPin size={18} /> },
+              { label: "Điểm đến", value: Array.isArray(selectedRoute.destinationStation) ? ((selectedRoute.destinationStation[0] as any)?.name || "") : (selectedRoute.destinationStation && (selectedRoute.destinationStation as any).name ? (selectedRoute.destinationStation as any).name : ""), type: "text", icon: <MapPin size={18} /> },
            ],
             [
               { label: "Khoảng cách (km)", value: selectedRoute.distanceKm || "", type: "text", icon: <Clock size={18} /> },
@@ -309,8 +333,22 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: newRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, name: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, originStation: e.target.value })) },
-              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, destinationStation: e.target.value })) },
+              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+                const originId = e.target.value;
+                const city1 = getCityByStationId(originId);
+                const city2 = getCityByStationId(newRoute.destinationStation);
+                const name = updateRouteName(originId, newRoute.destinationStation);
+                const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : newRoute.code;
+                setNewRoute((r: any) => ({ ...r, originStation: originId, name, code }));
+              }},
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+                const destId = e.target.value;
+                const city1 = getCityByStationId(newRoute.originStation);
+                const city2 = getCityByStationId(destId);
+                const name = updateRouteName(newRoute.originStation, destId);
+                const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : newRoute.code;
+                setNewRoute((r: any) => ({ ...r, destinationStation: destId, name, code }));
+              }},
             ],
             [
               { label: "Khoảng cách (km)", value: newRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },
@@ -339,8 +377,22 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: editRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, name: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, originStation: e.target.value })) },
-              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, destinationStation: e.target.value })) },
+              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+                const originId = e.target.value;
+                const city1 = getCityByStationId(originId);
+                const city2 = getCityByStationId(editRoute.destinationStation);
+                const name = updateRouteName(originId, editRoute.destinationStation);
+                const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : editRoute.code;
+                setEditRoute((r: any) => ({ ...r, originStation: originId, name, code }));
+              }},
+              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+                const destId = e.target.value;
+                const city1 = getCityByStationId(editRoute.originStation);
+                const city2 = getCityByStationId(destId);
+                const name = updateRouteName(editRoute.originStation, destId);
+                const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : editRoute.code;
+                setEditRoute((r: any) => ({ ...r, destinationStation: destId, name, code }));
+              }},
             ],
             [
               { label: "Khoảng cách (km)", value: editRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },

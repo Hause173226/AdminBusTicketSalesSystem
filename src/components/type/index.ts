@@ -28,16 +28,26 @@ export interface Route {
   }
   
   export interface Booking {
-    id: string;
-    routeId: string;
-    userId: string;
-    seatIds: string[];
-    totalPrice: number;
-    bookingDate: string;
-    travelDate: string;
-    status: 'confirmed' | 'cancelled' | 'completed';
-    paymentMethod: string;
-    qrCode?: string;
+    _id: string;
+    bookingCode: string;
+    customer: User; // Types.ObjectId hoặc populated object
+    trip: Trip; // Types.ObjectId hoặc populated object với route
+    pickupStation: Station; // Types.ObjectId hoặc populated object
+    dropoffStation: Station; // Types.ObjectId hoặc populated object
+    seatNumbers: string[];
+    totalAmount: number;
+    bookingStatus?: "pending" | "confirmed" | "paid" | "cancelled";
+    paymentStatus?: "unpaid" | "paid" | "failed";
+    paymentMethod?:
+      | "cash"
+      | "bank_transfer"
+      | "credit_card"
+      | "e_wallet"
+      | "online";
+    paymentDate?: Date;
+    notes?: string;
+    createdAt: Date;
+    updatedAt: Date;
   }
   
   export interface User {

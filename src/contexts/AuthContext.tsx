@@ -46,8 +46,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setError(null);
       const response = await userServices.signin(email, password);
-      if (response.data.token && response.data.user) {
-        localStorage.setItem('token', response.data.token);
+      console.log("API response:", response.data); // Debug API response
+      if (response.data.accessToken && response.data.user) {
+        localStorage.setItem('token', response.data.accessToken);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         setUser(response.data.user);
         setIsAdmin(response.data.user.role === 'admin');

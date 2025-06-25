@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import ManagerRoute from "./components/manager/managerRoute";
@@ -11,16 +11,30 @@ import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminProfile from "./components/AdminProfile";
+import ManagerBooking from "./components/manager/managerbooking";
+
+const Logout = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  React.useEffect(() => {
+    logout();
+    navigate("/login");
+  }, [logout, navigate]);
+  return null;
+};
 
 const AppContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState("trip");
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  if (loading) {
+    return <div>Đang kiểm tra đăng nhập...</div>;
+  }
   if (!user) {
     return (
       <Routes>
@@ -77,11 +91,17 @@ const AppContent = () => {
                 <ManagerUser />
               </PrivateRoute>
             } />
+            <Route path="/bookings" element={
+              <PrivateRoute>
+                <ManagerBooking />
+              </PrivateRoute>
+            } />
             <Route path="/profile" element={
               <PrivateRoute>
                 <AdminProfile />
               </PrivateRoute>
             } />
+            <Route path="/logout" element={<Logout />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

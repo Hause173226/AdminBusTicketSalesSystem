@@ -47,7 +47,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const location = useLocation();
   const headerRef = useRef<HTMLDivElement>(null);
   const [stopX, setStopX] = useState(0);
-  const busWidth = 100; // px
+  const busWidth = 80; // px
   const paddingRight = 24; // px (tùy theo px-6)
 
   useLayoutEffect(() => {
@@ -85,7 +85,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           initial={{ x: -busWidth }}
           animate={{ x: stopX }}
           transition={{ duration: 2, ease: "easeInOut" }}
-          style={{ position: "absolute", top: 0, left: 0, zIndex: 10, width: busWidth, height: 80 }}
+          style={{ position: "absolute", top: 0, left: 0, zIndex: 10, width: busWidth, height: 60 }}
         />
       </div>
     </header>
