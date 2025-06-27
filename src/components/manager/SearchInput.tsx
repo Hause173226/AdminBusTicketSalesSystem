@@ -33,7 +33,7 @@ const SearchInput: React.FC<SearchInputProps> = ({
   return (
     <div
       className="flex items-center border-2 border-blue-500 rounded-lg px-2 py-1 bg-white shadow focus-within:ring-2 focus-within:ring-blue-400"
-      style={{ maxWidth: 340 }}
+      style={{ maxWidth: 440 }}
     >
       <Search className="text-blue-500 mr-2" size={18} />
       <input

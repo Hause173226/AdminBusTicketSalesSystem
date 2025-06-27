@@ -219,6 +219,7 @@ const ManagerTrip = () => {
         notes: "",
       });
       await fetchTrips();
+      toast.success("Tạo chuyến xe thành công");
     } catch (err: any) {
       setCreateError("Lỗi khi tạo chuyến xe mới");
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi tạo chuyến xe mới");
@@ -246,6 +247,7 @@ const ManagerTrip = () => {
       setShowEditModal(false);
       setEditTrip(null);
       await fetchTrips();
+      toast.success("Cập nhật chuyến xe thành công");
     } catch (err: any) {
       setEditError("Lỗi khi cập nhật chuyến xe");
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật chuyến xe");
@@ -259,6 +261,7 @@ const ManagerTrip = () => {
       await deleteTrip(trip._id);
       await fetchTrips();
       setDeleteConfirmId(null);
+      toast.success("Xoá chuyến xe thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá chuyến xe");
     }
@@ -322,14 +325,17 @@ const ManagerTrip = () => {
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900">Danh sách chuyến xe</h3>
-            <SearchInput
-              value={searchRoute}
-              onChange={e => setSearchRoute(e.target.value)}
-              placeholder="Tìm kiếm tuyến..."
-            />
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium" onClick={() => setShowCreateModal(true)}>
-              Thêm chuyến mới
-            </button>
+            <div className="flex items-center gap-2 ml-auto">
+              <SearchInput
+                value={searchRoute}
+                onChange={e => setSearchRoute(e.target.value)}
+                placeholder="Tìm kiếm tuyến..."
+                debounceMs={1000}
+              />
+              <button className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium" onClick={() => setShowCreateModal(true)}>
+                Thêm chuyến mới
+              </button>
+            </div>
           </div>
         </div>
         <BasicTable columns={columns} data={filteredRouteData} rowKey="tripCode" />

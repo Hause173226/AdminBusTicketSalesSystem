@@ -8,6 +8,7 @@ import { Route } from "../type";
 import { Station } from "../type";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
+import SearchInput from "./SearchInput";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-700 border border-green-300 font-bold",
@@ -48,6 +49,7 @@ const ManagerRoute = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [searchRoute, setSearchRoute] = useState("");
 
   const handleView = (route: Route) => {
     setSelectedRoute(route);
@@ -286,19 +288,27 @@ const ManagerRoute = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách tuyến đường</h3>
-        <button
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-          onClick={handleOpenCreateModal}
-        >
-          Thêm tuyến mới
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <SearchInput
+            value={searchRoute}
+            onChange={e => setSearchRoute(e.target.value)}
+            placeholder="Tìm kiếm tuyến..."
+            debounceMs={1000}
+          />
+          <button
+            className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            onClick={handleOpenCreateModal}
+          >
+            Thêm tuyến mới
+          </button>
+        </div>
       </div>
       {loading ? (
         <div>Đang tải...</div>
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : (
-        <BasicTable columns={columns} data={routes} rowKey="_id" />
+        <BasicTable columns={columns} data={routes.filter(r => r.name?.toLowerCase().includes(searchRoute.toLowerCase()))} rowKey="_id" />
       )}
       {/* Modal xem chi tiết tuyến đường */}
       {showModal && selectedRoute && (

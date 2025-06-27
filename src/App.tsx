@@ -121,7 +121,7 @@ function App() {
       <AuthProvider>
         <AppContent />
       </AuthProvider>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
     </Router>
   );
 }

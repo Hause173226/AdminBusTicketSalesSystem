@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import busImg from '../../assets/bus1.png';
-import avatarImg from '../../assets/bus2.png';
+import avatarImg from '../../assets/avatar.png';
 
 type HeaderProps = {
   toggleSidebar: () => void;
