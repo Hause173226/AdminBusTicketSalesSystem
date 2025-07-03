@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
 import { getAllDrivers, deleteDriver, updateDriver, createDriver } from "../../services/driverService";
 import { getAllBusOperators } from "../../services/busoperatorServices";

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { userServices } from "../../services/userServices";
 import BasicTable from "../tables/BasicTable";
 import BasicModal from "../modal/BasicModal";
