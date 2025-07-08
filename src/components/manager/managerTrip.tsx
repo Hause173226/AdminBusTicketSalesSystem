@@ -1,9 +1,10 @@
 import  { useEffect, useState } from "react";
 import { Bus, BarChart3, Calendar, MapPin, Eye, Pencil, Trash2, CheckCircle, Clock, XCircle, Loader, DollarSign, Users, Info } from "lucide-react";
 import BasicTable from "../tables/BasicTable";
-import { getAllTrips, createTrip, updateTrip, deleteTrip } from "../../services/tripServices";
+import { getAllTrips, createTrip, createMultipleTrips, updateTrip, deleteTrip } from "../../services/tripServices";
 import { getAllRoutes } from "../../services/routeServices";
 import { getAllBuses } from "../../services/busServices";
+import { getAllDrivers } from "../../services/driverService";
 import BasicModal from "../modal/BasicModal";
 import { Calendar as CalendarIcon } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
@@ -31,6 +32,32 @@ const statusLabel: Record<string, string> = {
   "cancelled": "Đã huỷ",
 };
 
+// Utility: Lấy viết tắt tên địa danh (ví dụ: Hồ Chí Minh -> HCM)
+function getShortName(name: string) {
+  return name
+    .split(/\s|-/)
+    .filter(w => w && !["thành", "phố", "tỉnh", "huyện", "xã", "phường", "quận", "thị", "trấn", "và", "-", ""].includes(w.toLowerCase()))
+    .map(w => w[0].toUpperCase())
+    .join("");
+}
+
+// Sinh mã chuyến duy nhất dựa trên các tripCode đã tồn tại
+async function generateUniqueTripCode(route: any) {
+  if (!route?.name) return "";
+  const prefix = getShortName(route.name);
+  const allTrips = await getAllTrips();
+  const codes = allTrips
+    .filter((t: any) => t.route && (t.route._id === route._id || t.route.code === route.code))
+    .map((t: any) => t.tripCode);
+  let code = prefix;
+  let i = 1;
+  while (codes.includes(code)) {
+    code = `${prefix}-${i}`;
+    i++;
+  }
+  return code;
+}
+
 const ManagerTrip = () => {
   const [routeData, setRouteData] = useState<any[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<any | null>(null);
@@ -40,9 +67,9 @@ const ManagerTrip = () => {
     tripCode: "",
     route: "",
     bus: "",
+    driver: "",
     departureDate: "",
     departureTime: "",
-    arrivalTime: "",
     basePrice: "",
     availableSeats: "",
     status: "scheduled",
@@ -52,12 +79,31 @@ const ManagerTrip = () => {
   const [createError, setCreateError] = useState("");
   const [routes, setRoutes] = useState<any[]>([]);
   const [buses, setBuses] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [editTrip, setEditTrip] = useState<any | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchRoute, setSearchRoute] = useState("");
+  const [showMultipleModal, setShowMultipleModal] = useState(false);
+  const [multipleTripData, setMultipleTripData] = useState<any>({
+    route: "",
+    bus: "",
+    driver: "",
+    departureDate: "",
+    startTime: "",
+    endTime: "",
+    intervalHours: 2,
+    basePrice: "",
+    availableSeats: "",
+    status: "scheduled",
+    notes: "",
+  });
+  const [multipleLoading, setMultipleLoading] = useState(false);
+  const [multipleError, setMultipleError] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const handleView = (trip: any) => {
     setSelectedTrip(trip);
@@ -165,20 +211,23 @@ const ManagerTrip = () => {
   }, []);
 
   useEffect(() => {
-    const fetchRoutesAndBuses = async () => {
+    const fetchRoutesBusesDrivers = async () => {
       try {
-        const [routesData, busesData] = await Promise.all([
+        const [routesData, busesData, driversData] = await Promise.all([
           getAllRoutes(),
           getAllBuses(),
+          getAllDrivers(),
         ]);
         setRoutes(Array.isArray(routesData) ? routesData : [routesData]);
         setBuses(Array.isArray(busesData) ? busesData : [busesData]);
+        setDrivers(Array.isArray(driversData) ? driversData : [driversData]);
       } catch (err) {
         setRoutes([]);
         setBuses([]);
+        setDrivers([]);
       }
     };
-    fetchRoutesAndBuses();
+    fetchRoutesBusesDrivers();
   }, []);
 
   // Thêm hàm formatTime để chuẩn hóa giờ sang HH:mm
@@ -193,14 +242,20 @@ const ManagerTrip = () => {
     setCreateLoading(true);
     setCreateError("");
     try {
+      let tripCode = newTrip.tripCode;
+      // Nếu vì lý do nào đó chưa có tripCode, sinh lại
+      if (!tripCode && newTrip.route) {
+        tripCode = await generateUniqueTripCode(newTrip.route);
+      }
       const payload = {
         ...newTrip,
+        tripCode,
         route: typeof newTrip.route === 'object' ? newTrip.route._id : newTrip.route,
         bus: typeof newTrip.bus === 'object' ? newTrip.bus._id : newTrip.bus,
+        driver: typeof newTrip.driver === 'object' ? newTrip.driver._id : newTrip.driver,
         basePrice: Number(newTrip.basePrice),
         availableSeats: Number(newTrip.availableSeats),
         departureTime: formatTime(newTrip.departureTime),
-        arrivalTime: formatTime(newTrip.arrivalTime),
         status: newTrip.status || 'scheduled',
       };
       console.log("Payload gửi lên:", payload);
@@ -210,9 +265,9 @@ const ManagerTrip = () => {
         tripCode: "",
         route: "",
         bus: "",
+        driver: "",
         departureDate: "",
         departureTime: "",
-        arrivalTime: "",
         basePrice: "",
         availableSeats: "",
         status: "scheduled",
@@ -237,10 +292,10 @@ const ManagerTrip = () => {
         ...editTrip,
         route: typeof editTrip.route === 'object' ? editTrip.route._id : editTrip.route,
         bus: typeof editTrip.bus === 'object' ? editTrip.bus._id : editTrip.bus,
+        driver: typeof editTrip.driver === 'object' ? editTrip.driver._id : editTrip.driver,
         basePrice: Number(editTrip.basePrice),
         availableSeats: Number(editTrip.availableSeats),
         departureTime: formatTime(editTrip.departureTime),
-        arrivalTime: formatTime(editTrip.arrivalTime),
         status: editTrip.status || 'scheduled',
       };
       await updateTrip(editTrip._id, payload);
@@ -267,9 +322,68 @@ const ManagerTrip = () => {
     }
   };
 
+  const handleCreateMultipleTrips = async () => {
+    setMultipleLoading(true);
+    setMultipleError("");
+    try {
+      const payload = {
+        ...multipleTripData,
+        route: typeof multipleTripData.route === 'object' ? multipleTripData.route._id : multipleTripData.route,
+        bus: typeof multipleTripData.bus === 'object' ? multipleTripData.bus._id : multipleTripData.bus,
+        driver: typeof multipleTripData.driver === 'object' ? multipleTripData.driver._id : multipleTripData.driver,
+        basePrice: Number(multipleTripData.basePrice),
+        availableSeats: Number(multipleTripData.availableSeats),
+        status: multipleTripData.status || 'scheduled',
+      };
+      
+      await createMultipleTrips(
+        payload,
+        formatTime(multipleTripData.startTime),
+        formatTime(multipleTripData.endTime),
+        multipleTripData.intervalHours
+      );
+      
+      setShowMultipleModal(false);
+      setMultipleTripData({
+        route: "",
+        bus: "",
+        driver: "",
+        departureDate: "",
+        startTime: "",
+        endTime: "",
+        intervalHours: 2,
+        basePrice: "",
+        availableSeats: "",
+        status: "scheduled",
+        notes: "",
+      });
+      await fetchTrips();
+      toast.success("Tạo nhiều chuyến xe thành công");
+    } catch (err: any) {
+      setMultipleError("Lỗi khi tạo nhiều chuyến xe");
+      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi tạo nhiều chuyến xe");
+    } finally {
+      setMultipleLoading(false);
+    }
+  };
+
+  const handleRouteChange = async (e: any) => {
+    const selectedRoute = routes.find(r => r._id === e.target.value);
+    if (selectedRoute) {
+      const code = await generateUniqueTripCode(selectedRoute);
+      setNewTrip((prev: any) => ({
+        ...prev,
+        route: selectedRoute,
+        tripCode: code
+      }));
+    }
+  };
+
   const filteredRouteData = routeData.filter(trip =>
     trip.route?.name?.toLowerCase().includes(searchRoute.toLowerCase())
   );
+  const totalPages = Math.ceil(filteredRouteData.length / pageSize);
+  const paginatedRouteData = filteredRouteData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -332,13 +446,45 @@ const ManagerTrip = () => {
                 placeholder="Tìm kiếm tuyến..."
                 debounceMs={1000}
               />
+              <button className="ml-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium" onClick={() => setShowMultipleModal(true)}>
+                Tạo nhiều chuyến
+              </button>
               <button className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium" onClick={() => setShowCreateModal(true)}>
                 Thêm chuyến mới
               </button>
             </div>
           </div>
         </div>
-        <BasicTable columns={columns} data={filteredRouteData} rowKey="tripCode" />
+        <BasicTable columns={columns} data={paginatedRouteData} rowKey="tripCode" />
+        {/* Pagination controls */}
+        <div className="flex justify-between items-center mt-4">
+          <div>
+            Trang {currentPage} / {totalPages}
+          </div>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Trước
+            </button>
+            <button
+              disabled={currentPage === totalPages || totalPages === 0}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Sau
+            </button>
+          </div>
+          <div>
+            <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+              {[5, 10, 20, 50].map(size => (
+                <option key={size} value={size}>{size} / trang</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
       {/* Modal xem chi tiết chuyến xe */}
       {showModal && selectedTrip && (
@@ -393,24 +539,16 @@ const ManagerTrip = () => {
               { label: "Tuyến", value: newTrip.route, type: "select", options: routes.map((r) => ({
                 label: `${r.originStation?.name || ""} - ${r.destinationStation?.name || ""} (${r.name || r.code})`,
                 value: r._id
-              })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, route: e.target.value })),  colSpan: 2 },
+              })), onChange: (e: any) => handleRouteChange(e),  colSpan: 2 },
             ],
             [
-              { label: "Mã chuyến", value: newTrip.tripCode, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
               { label: "Xe", value: newTrip.bus, type: "select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, bus: e.target.value })) },
+              { label: "Tài xế", value: newTrip.driver, type: "select", options: drivers.map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, driver: e.target.value })) },
             ],
             [
-              { label: "Trạng thái", value: newTrip.status, type: "select", options: [
-                { label: "Đã lên lịch", value: "scheduled" },
-                { label: "Đang chạy", value: "in_progress" },
-                { label: "Hoàn thành", value: "completed" },
-                { label: "Đã huỷ", value: "cancelled" },
-              ], onChange: (e: any) => setNewTrip((r: any) => ({ ...r, status: e.target.value })) },
               { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
-            ],
-            [
-              { label: "Giờ đi", value: newTrip.departureTime, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
-              { label: "Giờ đến", value: newTrip.arrivalTime, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, arrivalTime: e.target.value })) },
+              { label: "Giờ đi", value: newTrip.departureTime, type: "time", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
+
             ],
             [
               { label: "Giá vé", value: newTrip.basePrice, type: "number", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, basePrice: e.target.value })) },
@@ -446,6 +584,7 @@ const ManagerTrip = () => {
               { label: "Xe", value: editTrip.bus, type: "select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => setEditTrip((r: any) => ({ ...r, bus: e.target.value })) },
             ],
             [
+              { label: "Tài xế", value: editTrip.driver, type: "select", options: drivers.map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setEditTrip((r: any) => ({ ...r, driver: e.target.value })) },
               { label: "Trạng thái", value: editTrip.status, type: "select", options: [
                 { label: "Đã lên lịch", value: "scheduled" },
                 { label: "Đang chạy", value: "in_progress" },
@@ -455,8 +594,7 @@ const ManagerTrip = () => {
               { label: "Ngày xuất phát", value: editTrip.departureDate ? new Date(editTrip.departureDate).toISOString().slice(0, 10) : "", type: "date", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
             ],
             [
-              { label: "Giờ đi", value: editTrip.departureTime, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
-              { label: "Giờ đến", value: editTrip.arrivalTime, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, arrivalTime: e.target.value })) },
+              { label: "Giờ đi", value: editTrip.departureTime, type: "time", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
             ],
             [
               { label: "Giá vé", value: editTrip.basePrice, type: "number", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, basePrice: e.target.value })) },
@@ -467,6 +605,52 @@ const ManagerTrip = () => {
             ],
           ]}
           updatedAt={editTrip.updatedAt}
+        />
+      )}
+      {/* Modal tạo nhiều chuyến xe */}
+      {showMultipleModal && (
+        <BasicModal
+          open={showMultipleModal}
+          onClose={() => setShowMultipleModal(false)}
+          title="Tạo nhiều chuyến xe"
+          subtitle="Tạo nhiều chuyến xe theo lịch trình"
+          icon={<Bus size={28} />}
+          readonly={false}
+          onSubmit={handleCreateMultipleTrips}
+          submitLabel={multipleLoading ? "Đang tạo..." : "Tạo nhiều chuyến"}
+          rows={[
+            [
+              { label: "Tuyến", value: multipleTripData.route, type: "select", options: routes.map((r) => ({
+                label: `${r.originStation?.name || ""} - ${r.destinationStation?.name || ""} (${r.name || r.code})`,
+                value: r._id
+              })), onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, route: e.target.value })), colSpan: 2 },
+            ],
+            [
+              { label: "Xe", value: multipleTripData.bus, type: "select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, bus: e.target.value })) },
+              { label: "Tài xế", value: multipleTripData.driver, type: "select", options: drivers.map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, driver: e.target.value })) },
+              { label: "Ngày xuất phát", value: multipleTripData.departureDate, type: "date", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, departureDate: e.target.value })) },
+            ],
+            [
+              { label: "Giờ bắt đầu", value: multipleTripData.startTime, type: "time", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, startTime: e.target.value })) },
+              { label: "Giờ kết thúc", value: multipleTripData.endTime, type: "time", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, endTime: e.target.value })) },
+            ],
+            [
+              { label: "Khoảng cách (giờ)", value: multipleTripData.intervalHours, type: "number", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, intervalHours: Number(e.target.value) })) },
+              { label: "Trạng thái", value: multipleTripData.status, type: "select", options: [
+                { label: "Đã lên lịch", value: "scheduled" },
+                { label: "Đang chạy", value: "in_progress" },
+                { label: "Hoàn thành", value: "completed" },
+                { label: "Đã huỷ", value: "cancelled" },
+              ], onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, status: e.target.value })) },
+            ],
+            [
+              { label: "Giá vé", value: multipleTripData.basePrice, type: "number", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, basePrice: e.target.value })) },
+              { label: "Ghế còn", value: multipleTripData.availableSeats, type: "number", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, availableSeats: e.target.value })) },
+            ],
+            [
+              { label: "Ghi chú", value: multipleTripData.notes, type: "text", onChange: (e: any) => setMultipleTripData((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
+            ],
+          ]}
         />
       )}
     </div>

@@ -50,6 +50,8 @@ const ManagerRoute = () => {
   const [editError, setEditError] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchRoute, setSearchRoute] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const handleView = (route: Route) => {
     setSelectedRoute(route);
@@ -284,6 +286,10 @@ const ManagerRoute = () => {
     },
   ];
 
+  const filteredRoutes = routes.filter(r => r.name?.toLowerCase().includes(searchRoute.toLowerCase()));
+  const totalPages = Math.ceil(filteredRoutes.length / pageSize);
+  const paginatedRoutes = filteredRoutes.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -308,7 +314,38 @@ const ManagerRoute = () => {
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : (
-        <BasicTable columns={columns} data={routes.filter(r => r.name?.toLowerCase().includes(searchRoute.toLowerCase()))} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedRoutes} rowKey="_id" />
+          {/* Pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              Trang {currentPage} / {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+            <div>
+              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size} / trang</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       {/* Modal xem chi tiết tuyến đường */}
       {showModal && selectedRoute && (
@@ -357,11 +394,11 @@ const ManagerRoute = () => {
               { label: "Trạng thái", value: newRoute.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setNewRoute((r: any) => ({ ...r, status: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const originId = e.target.value;
                 setNewRoute((r: any) => ({ ...r, originStation: originId }));
               }},
-              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const destId = e.target.value;
                 setNewRoute((r: any) => ({ ...r, destinationStation: destId }));
               }},
@@ -390,7 +427,7 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: editRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, name: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const originId = e.target.value;
                 const city1 = getCityByStationId(originId);
                 const city2 = getCityByStationId(editRoute.destinationStation);
@@ -398,7 +435,7 @@ const ManagerRoute = () => {
                 const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : editRoute.code;
                 setEditRoute((r: any) => ({ ...r, originStation: originId, name, code }));
               }},
-              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: s.name, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const destId = e.target.value;
                 const city1 = getCityByStationId(editRoute.originStation);
                 const city2 = getCityByStationId(destId);

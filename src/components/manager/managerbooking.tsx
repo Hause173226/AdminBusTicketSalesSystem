@@ -9,6 +9,8 @@ const ManagerBooking: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   // Handler functions
   function handleView(row: any) {
@@ -76,6 +78,9 @@ const ManagerBooking: React.FC = () => {
     });
   }, []);
 
+  const totalPages = Math.ceil(bookings.length / pageSize);
+  const paginatedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   // Detail rows for modal
   const detailRows = selectedBooking
     ? [
@@ -117,7 +122,38 @@ const ManagerBooking: React.FC = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={Array.isArray(bookings) ? bookings : []} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedBookings} rowKey="_id" />
+          {/* Pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              Trang {currentPage} / {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+            <div>
+              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size} / trang</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       {modalOpen && selectedBooking && (
         <BasicModal
