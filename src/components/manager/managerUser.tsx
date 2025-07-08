@@ -55,6 +55,8 @@ const ManagerUser = () => {
   const [editUser, setEditUser] = useState<any | null>(null);
   const [editFields, setEditFields] = useState<any>({});
   const [deletePopover, setDeletePopover] = useState<{ open: boolean; user: any | null }>({ open: false, user: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   handleView = (user: any) => {
     setSelectedUser(user);
@@ -143,6 +145,9 @@ const ManagerUser = () => {
     fetchUsers();
   }, []);
 
+  const totalPages = Math.ceil(users.length / pageSize);
+  const paginatedUsers = users.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const columnsWithActions = [
     ...columns.slice(0, 3),
     {
@@ -200,7 +205,38 @@ const ManagerUser = () => {
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : (
-        <BasicTable columns={columnsWithActions} data={users} rowKey="_id" />
+        <>
+          <BasicTable columns={columnsWithActions} data={paginatedUsers} rowKey="_id" />
+          {/* Pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              Trang {currentPage} / {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+            <div>
+              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size} / trang</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       {/* Modal xem chi tiết người dùng */}
       {showModal && selectedUser && (

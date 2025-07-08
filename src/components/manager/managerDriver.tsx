@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
 import { getAllDrivers, deleteDriver, updateDriver, createDriver } from "../../services/driverService";
-import { getAllBusOperators } from "../../services/busoperatorServices";
 import { Driver } from "../type";
 import BasicModal from "../modal/BasicModal";
 import { UserCheck, Phone, Mail, Calendar as CalendarIcon, Users, Eye, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
@@ -38,18 +37,18 @@ const ManagerDriver = () => {
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [busOperators, setBusOperators] = useState<any[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
   const [newDriver, setNewDriver] = useState<any>({
     fullName: "",
     phone: "",
     email: "",
     licenseNumber: "",
-    status: "active",
-    operator: "",
+    status: "active"
   });
   const [searchValue, setSearchValue] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchDrivers = async () => {
     setLoading(true);
@@ -61,18 +60,8 @@ const ManagerDriver = () => {
     }
   };
 
-  const fetchBusOperators = async () => {
-    try {
-      const data = await getAllBusOperators();
-      setBusOperators(Array.isArray(data) ? data : [data]);
-    } catch (err) {
-      setBusOperators([]);
-    }
-  };
-
   useEffect(() => {
     fetchDrivers();
-    fetchBusOperators();
   }, []);
 
   handleView = (driver: any) => {
@@ -97,10 +86,7 @@ const ManagerDriver = () => {
     setEditLoading(true);
     try {
       const payload = {
-        ...editDriver,
-        operator: typeof editDriver.operator === "object"
-          ? (editDriver.operator as any)._id
-          : editDriver.operator,
+        ...editDriver
       };
       await updateDriver(editDriver._id, payload);
       setShowEditModal(false);
@@ -132,8 +118,7 @@ const ManagerDriver = () => {
       phone: "",
       email: "",
       licenseNumber: "",
-      status: "active",
-      operator: "",
+      status: "active"
     });
   };
   const handleCloseCreateModal = () => {
@@ -143,8 +128,7 @@ const ManagerDriver = () => {
     setCreateLoading(true);
     try {
       const payload = {
-        ...newDriver,
-        operator: typeof newDriver.operator === "object" ? newDriver.operator._id : newDriver.operator,
+        ...newDriver
       };
       await createDriver(payload);
       setShowCreateModal(false);
@@ -153,8 +137,7 @@ const ManagerDriver = () => {
         phone: "",
         email: "",
         licenseNumber: "",
-        status: "active",
-        operator: "",
+        status: "active"
       });
       await fetchDrivers();
       toast.success("Tạo tài xế thành công");
@@ -169,6 +152,8 @@ const ManagerDriver = () => {
     (driver.fullName?.toLowerCase().includes(searchValue.toLowerCase()) ||
      driver.phone?.toLowerCase().includes(searchValue.toLowerCase()))
   );
+  const totalPages = Math.ceil(filteredDrivers.length / pageSize);
+  const paginatedDrivers = filteredDrivers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
     { key: "fullName", label: "Họ tên" },
@@ -248,7 +233,38 @@ const ManagerDriver = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={filteredDrivers} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedDrivers} rowKey="_id" />
+          {/* Pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              Trang {currentPage} / {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+            <div>
+              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size} / trang</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       {showModal && selectedDriver && (
         <BasicModal
@@ -274,9 +290,6 @@ const ManagerDriver = () => {
               { label: "Email", value: selectedDriver.email || "", type: "text", icon: <Mail size={18} /> },
               { label: "Số GPLX", value: selectedDriver.licenseNumber || "", type: "text" },
             ],
-            [
-              { label: "Nhà xe", value: typeof selectedDriver.operator === 'object' && selectedDriver.operator !== null ? (selectedDriver.operator as any).name : ((busOperators as any[]).find((op: any) => op._id === selectedDriver.operator)?.name || selectedDriver.operator || ""), type: "text", colSpan: 2 },
-            ],
           ]}
         />
       )}
@@ -298,9 +311,6 @@ const ManagerDriver = () => {
             [
               { label: "Email", value: editDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, email: e.target.value })) },
               { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => setEditDriver((d: any) => ({ ...d, licenseNumber: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: editDriver.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setEditDriver((d: any) => ({ ...d, operator: e.target.value })), colSpan: 2 },
             ],
             [
               { label: "Trạng thái", value: editDriver.status, type: "select", options: [
@@ -330,9 +340,6 @@ const ManagerDriver = () => {
             [
               { label: "Email", value: newDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => setNewDriver((d: any) => ({ ...d, email: e.target.value })) },
               { label: "Số GPLX", value: newDriver.licenseNumber, type: "text", onChange: (e: any) => setNewDriver((d: any) => ({ ...d, licenseNumber: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: newDriver.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setNewDriver((d: any) => ({ ...d, operator: e.target.value })), colSpan: 2 },
             ],
             [
               { label: "Trạng thái", value: newDriver.status, type: "select", options: [

@@ -9,6 +9,7 @@ interface Field {
   icon?: React.ReactNode;
   colSpan?: number; // 2 nếu muốn chiếm full row
   onChange?: (e: React.ChangeEvent<any>) => void;
+  readOnly?: boolean;
 }
 
 interface BasicModalProps {
@@ -22,6 +23,7 @@ interface BasicModalProps {
   onSubmit?: () => void;
   submitLabel?: string;
   updatedAt?: string;
+  children?: React.ReactNode;
 }
 
 const BasicModal: React.FC<BasicModalProps> = ({
@@ -35,6 +37,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
   onSubmit,
   submitLabel = "Lưu",
   updatedAt,
+  children,
 }) => {
   if (!open) return null;
   return (
@@ -97,6 +100,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             placeholder={field.placeholder || field.label}
                             title={field.label}
                             onChange={field.onChange}
+                            readOnly={field.readOnly}
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -114,6 +118,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             placeholder={field.placeholder || field.label}
                             title={field.label}
                             onChange={field.onChange}
+                            readOnly={field.readOnly}
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -128,6 +133,8 @@ const BasicModal: React.FC<BasicModalProps> = ({
               </div>
             ))}
           </div>
+          {/* Custom children content */}
+          {children && <div className="mb-6">{children}</div>}
           <div className="flex items-center justify-between gap-2">
             {updatedAt ? (
               <div className="text-xs text-gray-500">

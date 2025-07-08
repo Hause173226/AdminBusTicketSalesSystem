@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
 import { getAllBuses, deleteBus, updateBus, createBus } from "../../services/busServices";
-import { getAllBusOperators } from "../../services/busoperatorServices";
 import { Bus } from "../type";
 import BasicModal from "../modal/BasicModal";
-import { Bus as BusIcon, Users, Hash, Settings, CheckCircle, XCircle, Wrench, Eye, Pencil, Trash2 } from "lucide-react";
+import { Bus as BusIcon, Hash, Settings, CheckCircle, XCircle, Wrench, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
@@ -45,11 +44,11 @@ const ManagerBus = () => {
     licensePlate: "",
     busType: "standard",
     seatCount: "",
-    status: "active",
-    operator: "",
+    status: "active"
   });
-  const [busOperators, setBusOperators] = useState<any[]>([]);
   const [searchBusType, setSearchBusType] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchBuses = async () => {
     setLoading(true);
@@ -61,18 +60,8 @@ const ManagerBus = () => {
     }
   };
 
-  const fetchBusOperators = async () => {
-    try {
-      const data = await getAllBusOperators();
-      setBusOperators(Array.isArray(data) ? data : [data]);
-    } catch (err) {
-      setBusOperators([]);
-    }
-  };
-
   useEffect(() => {
     fetchBuses();
-    fetchBusOperators();
   }, []);
 
   handleView = (bus: any) => {
@@ -120,7 +109,7 @@ const ManagerBus = () => {
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
     setCreateError("");
-    setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active", operator: "" });
+    setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active" });
   };
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
@@ -134,11 +123,11 @@ const ManagerBus = () => {
         busType: newBus.busType,
         seatCount: Number(newBus.seatCount),
         status: newBus.status,
-        operator: newBus.operator,
+        image: newBus.image
       };
       await createBus(payload);
       setShowCreateModal(false);
-      setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active", operator: "" });
+      setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active" });
       await fetchBuses();
       toast.success("Tạo xe bus thành công");
     } catch (err: any) {
@@ -152,8 +141,22 @@ const ManagerBus = () => {
   const filteredBuses = buses.filter(bus =>
     bus.busType?.toLowerCase().includes(searchBusType.toLowerCase())
   );
+  const totalPages = Math.ceil(filteredBuses.length / pageSize);
+  const paginatedBuses = filteredBuses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
+    {
+      key: "image",
+      label: "Ảnh",
+      render: (value: string) =>
+        value ? (
+          <img
+            src={value}
+            alt="Bus"
+            style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6 }}
+          />
+        ) : null,
+    },
     { key: "licensePlate", label: "Biển số" },
     { key: "busType", label: "Loại xe" },
     { key: "seatCount", label: "Số ghế" },
@@ -210,6 +213,27 @@ const ManagerBus = () => {
     },
   ];
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (isEdit) {
+        setEditBus((b: any) => ({ ...b, image: data.url }));
+      } else {
+        setNewBus((b: any) => ({ ...b, image: data.url }));
+      }
+    } catch (err) {
+      toast.error("Lỗi upload ảnh");
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -229,7 +253,38 @@ const ManagerBus = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={filteredBuses} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedBuses} rowKey="_id" />
+          {/* Pagination controls */}
+          <div className="flex justify-between items-center mt-4">
+            <div>
+              Trang {currentPage} / {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Trước
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                className="px-3 py-1 border rounded disabled:opacity-50"
+              >
+                Sau
+              </button>
+            </div>
+            <div>
+              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size} / trang</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </>
       )}
       {showModal && selectedBus && (
         <BasicModal
@@ -245,11 +300,8 @@ const ManagerBus = () => {
               { label: "Loại xe", value: selectedBus.busType || "", type: "text", icon: <Settings size={18} /> },
             ],
             [
-              { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Users size={18} /> },
+              { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Hash size={18} /> },
               { label: "Trạng thái", value: statusLabel[selectedBus.status || "inactive"], type: "text" },
-            ],
-            [
-              { label: "Nhà xe", value: typeof selectedBus.operator === 'object' && selectedBus.operator !== null ? (selectedBus.operator as any).name : (busOperators.find((op: any) => op._id === selectedBus.operator)?.name || selectedBus.operator || ""), type: "text"  ,colSpan: 2 },
             ],
           ]}
         />
@@ -275,17 +327,20 @@ const ManagerBus = () => {
               ], icon: <Settings size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, busType: e.target.value })) },
             ],
             [
-              { label: "Số ghế", value: editBus.seatCount, type: "number", icon: <Users size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, seatCount: e.target.value })) },
+              { label: "Số ghế", value: editBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, seatCount: e.target.value })) },
               { label: "Trạng thái", value: editBus.status, type: "select", options: [
                 { label: "Hoạt động", value: "active" },
                 { label: "Bảo trì", value: "maintenance" },
                 { label: "Ngừng hoạt động", value: "inactive" },
               ], onChange: (e: any) => setEditBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
-            [
-              { label: "Nhà xe", value: editBus.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setEditBus((b: any) => ({ ...b, operator: e.target.value })),  colSpan: 2 },
-            ],
           ]}
+          children={
+            <div style={{ marginTop: 12 }}>
+              <input type="file" accept="image/*" onChange={e => handleImageChange(e, true)} title="Chọn ảnh xe bus" placeholder="Chọn ảnh xe bus" />
+              {editBus.image && <img src={editBus.image} alt="Bus preview" style={{ width: 100, marginTop: 8 }} />}
+            </div>
+          }
         />
       )}
       {showCreateModal && (
@@ -309,17 +364,20 @@ const ManagerBus = () => {
               ], icon: <Settings size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, busType: e.target.value })) },
             ],
             [
-              { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Users size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
+              { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
               { label: "Trạng thái", value: newBus.status, type: "select", options: [
                 { label: "Hoạt động", value: "active" },
                 { label: "Bảo trì", value: "maintenance" },
                 { label: "Ngừng hoạt động", value: "inactive" },
               ], onChange: (e: any) => setNewBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
-            [
-              { label: "Nhà xe", value: newBus.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setNewBus((b: any) => ({ ...b, operator: e.target.value })) },
-            ],
           ]}
+          children={
+            <div style={{ marginTop: 12 }}>
+              <input type="file" accept="image/*" onChange={e => handleImageChange(e)} title="Chọn ảnh xe bus" placeholder="Chọn ảnh xe bus" />
+              {newBus.image && <img src={newBus.image} alt="Bus preview" style={{ width: 100, marginTop: 8 }} />}
+            </div>
+          }
         />
       )}
     </div>
