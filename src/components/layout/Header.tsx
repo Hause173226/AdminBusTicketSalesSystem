@@ -4,13 +4,14 @@ import { motion } from "framer-motion";
 import { useLocation } from "react-router-dom";
 import busImg from '../../assets/bus1.png';
 import avatarImg from '../../assets/avatar.png';
+import { useUser } from '../../contexts/UserContext';
 
 type HeaderProps = {
   toggleSidebar: () => void;
 };
 
 const headerInfo: Record<string, { title: string; subtitle: string }> = {
-  "/": {
+  "/trips": {
     title: "Quản lý chuyến xe",
     subtitle: "Quản lý và theo dõi các chuyến xe trong hệ thống",
   },
@@ -42,6 +43,26 @@ const headerInfo: Record<string, { title: string; subtitle: string }> = {
     title: "Cài đặt",
     subtitle: "Cấu hình hệ thống và các tuỳ chọn",
   },
+  "/bookings": {
+    title: "Quản lý booking",
+    subtitle: "Quản lý và theo dõi các booking/vé xe trong hệ thống",
+  },
+ 
+};
+
+const getUserAvatar = () => {
+  // Ưu tiên lấy avatar từ localStorage nếu đã lưu khi đăng nhập/profile
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      if (user.avatar && typeof user.avatar === 'string' && user.avatar.trim() !== '') {
+        return user.avatar;
+      }
+    }
+  } catch {}
+  // Nếu không có thì dùng avatar mặc định
+  return avatarImg;
 };
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
@@ -53,6 +74,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const busWidth = 80; // px
   const avatarSize = 48; // px
   const paddingRight = 24; // px (tùy theo px-6)
+  const { user } = useUser();
+  const avatarSrc = user?.avatar && user.avatar.trim() !== '' ? user.avatar : avatarImg;
 
   useLayoutEffect(() => {
     if (headerRef.current) {
@@ -117,7 +140,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
         {/* Avatar animation */}
         {showAvatar && (
           <motion.img
-            src={avatarImg}
+            src={avatarSrc}
             alt="avatar"
             initial={{ x: avatarStartX, opacity: 0, left: 0, right: 'auto' }}
             animate={{ x: 0, opacity: 1, left: 'auto', right: avatarEndRight }}

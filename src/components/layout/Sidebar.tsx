@@ -1,17 +1,17 @@
 import React, { useState } from "react";
-import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X, MapPin, LogOut, User } from "lucide-react";
+import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X, MapPin, LogOut, User, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 const menuItems = [
- 
+  { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "trips", label: "Quản lý chuyến xe", icon: Bus },
   { id: "routes", label: "Quản lý tuyến đường", icon: MapPin },
   { id: "vehicles", label: "Quản lý xe", icon: Truck },
   { id: "drivers", label: "Quản lý tài xế", icon: UserCheck },
   { id: "users", label: "Quản lý người dùng", icon: Users },
   { id: "bookings", label: "Quản lý booking", icon: CreditCard },
-  { id: "payments", label: "Quản lý thanh toán", icon: CreditCard },
-  { id: "feedback", label: "Phản hồi", icon: MessageSquare },
+  // { id: "payments", label: "Quản lý thanh toán", icon: CreditCard }, // Ẩn mục này
+  // { id: "feedback", label: "Phản hồi", icon: MessageSquare }, // Ẩn mục này
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
@@ -25,6 +25,10 @@ type SidebarProps = {
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeMenuItem, setActiveMenuItem }) => {
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Luôn mở settings nếu đang ở profile
+  React.useEffect(() => {
+    if (activeMenuItem === "profile") setIsSettingsOpen(true);
+  }, [activeMenuItem]);
   return (
     <div
       className={`$
@@ -34,10 +38,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-center h-16 px-6 border-b border-gray-200 relative">
           <motion.h1
-            className="text-2xl font-extrabold tracking-wide drop-shadow-lg bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 text-transparent bg-clip-text"
+            className="text-2xl font-extrabold tracking-wide drop-shadow-lg text-sky-200"
+            style={{ textAlign: 'center', width: '100%', textShadow: '0 0 8px #38bdf8, 0 0 16px #fff' }}
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-            style={{ textAlign: 'center', width: '100%' }}
           >
             BusSystem
           </motion.h1>
@@ -52,7 +56,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
         <nav className="flex-1 px-4 py-6 space-y-1">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
-            const isActive = activeMenuItem === item.id;
+            // Nếu đang ở profile, không highlight menu chính nào
+            const isActive = activeMenuItem === item.id && activeMenuItem !== "profile";
             if (item.id === "settings") {
               return (
                 <div key={item.id}>
@@ -74,8 +79,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
                   {isSettingsOpen && (
                     <div className="ml-8 mt-1 flex flex-col gap-1">
                       <button
-                        onClick={() => { navigate("/profile"); setIsSettingsOpen(false); }}
-                        className="flex items-center gap-2 px-2 py-2 text-sm rounded text-white hover:text-blue-400 font-semibold transition-all"
+                        onClick={() => { navigate("/profile"); setIsSettingsOpen(false); setActiveMenuItem("profile"); }}
+                        className={`flex items-center gap-2 px-2 py-2 text-sm rounded font-semibold transition-all ${
+                          activeMenuItem === "profile"
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-white hover:text-blue-400"
+                        }`}
                       >
                         <User className="w-4 h-4 text-blue-300" />
                         Xem hồ sơ
@@ -96,7 +105,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
               <button
                 key={item.id}
                 onClick={() => {setActiveMenuItem(item.id);
-                  if (item.id === "trips") navigate("/");
+                  if (item.id === "dashboard") navigate("/dashboard");
+                  if (item.id === "trips") navigate("/trips");
                   if (item.id === "routes") navigate("/routes");
                   if (item.id === "vehicles") navigate("/bus");
                   if (item.id === "drivers") navigate("/drivers");

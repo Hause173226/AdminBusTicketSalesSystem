@@ -3,6 +3,9 @@ import { bookingService } from "../../services/bookingServic";
 import BasicTable from "../tables/BasicTable";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import BasicModal from "../modal/BasicModal";
+import Pagination from "../common/Pagination";
+import { toast } from "react-toastify";
+import SearchInput from "./SearchInput";
 
 const ManagerBooking: React.FC = () => {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -10,7 +13,8 @@ const ManagerBooking: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(6);
+  const [searchValue, setSearchValue] = useState("");
 
   // Handler functions
   function handleView(row: any) {
@@ -23,7 +27,8 @@ const ManagerBooking: React.FC = () => {
   }
   function handleDelete(row: any) {
     // TODO: xác nhận xoá booking
-    console.log("Delete booking", row);
+    // console.log("Delete booking", row);
+    toast.info("Chức năng xoá booking chưa được triển khai");
   }
 
   // Helper để lấy tên chuyến xe từ trip
@@ -73,13 +78,24 @@ const ManagerBooking: React.FC = () => {
 
   useEffect(() => {
     bookingService.getAllBookings().then((data) => {
-      setBookings(Array.isArray(data.data) ? data.data : []);
+      const arr = Array.isArray(data.data) ? data.data : [];
+      // Sort by createdAt descending (newest first)
+      arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setBookings(arr);
       setLoading(false);
     });
   }, []);
 
-  const totalPages = Math.ceil(bookings.length / pageSize);
-  const paginatedBookings = bookings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  // Filter bookings by customer name
+  const filteredBookings = bookings.filter(b => {
+    const v = searchValue.toLowerCase();
+    return (
+      b.customer?.fullName?.toLowerCase().includes(v) ||
+      b.customer?.name?.toLowerCase().includes(v)
+    );
+  });
+  const totalPages = Math.ceil(filteredBookings.length / pageSize);
+  const paginatedBookings = filteredBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Detail rows for modal
   const detailRows = selectedBooking
@@ -115,9 +131,17 @@ const ManagerBooking: React.FC = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách Booking</h3>
-        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
-          Thêm booking mới
-        </button>
+        <div className="flex items-center gap-2 ml-auto">
+          <SearchInput
+            value={searchValue}
+            onChange={e => { setSearchValue(e.target.value); setCurrentPage(1); }}
+            placeholder="Tìm kiếm tên khách hàng..."
+            debounceMs={1000}
+          />
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+            Thêm booking mới
+          </button>
+        </div>
       </div>
       {loading ? (
         <div>Đang tải...</div>
@@ -125,34 +149,14 @@ const ManagerBooking: React.FC = () => {
         <>
           <BasicTable columns={columns} data={paginatedBookings} rowKey="_id" />
           {/* Pagination controls */}
-          <div className="flex justify-between items-center mt-4">
-            <div>
-              Trang {currentPage} / {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Trước
-              </button>
-              <button
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Sau
-              </button>
-            </div>
-            <div>
-              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
-                {[5, 10, 20, 50].map(size => (
-                  <option key={size} value={size}>{size} / trang</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
         </>
       )}
       {modalOpen && selectedBooking && (

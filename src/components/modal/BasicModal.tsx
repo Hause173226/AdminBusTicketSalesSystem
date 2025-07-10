@@ -1,15 +1,17 @@
 import React from "react";
+import SearchableSelect from "../common/SearchableSelect";
 
 interface Field {
   label: string;
   value: any;
   type?: string; // text, select, date, etc.
-  options?: { label: string; value: any }[]; // cho select
+  options?: { label: string; value: any }[]; 
   placeholder?: string;
   icon?: React.ReactNode;
-  colSpan?: number; // 2 nếu muốn chiếm full row
+  colSpan?: number; 
   onChange?: (e: React.ChangeEvent<any>) => void;
   readOnly?: boolean;
+  error?: string; 
 }
 
 interface BasicModalProps {
@@ -75,7 +77,15 @@ const BasicModal: React.FC<BasicModalProps> = ({
                   >
                     <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
                     <div className="relative">
-                      {field.type === "select" && field.options ? (
+                      {field.type === "searchable-select" && field.options ? (
+                        <SearchableSelect
+                          options={field.options}
+                          value={field.value}
+                          onChange={field.onChange as any}
+                          placeholder={field.placeholder || `Chọn ${field.label.toLowerCase()}`}
+                          disabled={readonly}
+                        />
+                      ) : field.type === "select" && field.options ? (
                         <select
                           className="w-full border rounded px-3 py-2 bg-gray-100"
                           value={field.value}
@@ -128,6 +138,9 @@ const BasicModal: React.FC<BasicModalProps> = ({
                         </>
                       )}
                     </div>
+                    {field.error && (
+                      <div className="text-xs text-red-600 mt-1">{field.error}</div>
+                    )}
                   </div>
                 ))}
               </div>

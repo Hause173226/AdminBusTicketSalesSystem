@@ -7,6 +7,7 @@ import { Bus as BusIcon, Hash, Settings, CheckCircle, XCircle, Wrench, Eye, Penc
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
+import Pagination from "../common/Pagination";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-700 border border-green-300 font-bold",
@@ -48,12 +49,14 @@ const ManagerBus = () => {
   });
   const [searchBusType, setSearchBusType] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(6);
 
   const fetchBuses = async () => {
     setLoading(true);
     try {
       const data = await getAllBuses();
+      // Sort by createdAt descending (newest first)
+      data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setBuses(data);
     } finally {
       setLoading(false);
@@ -89,6 +92,7 @@ const ManagerBus = () => {
       setShowEditModal(false);
       setEditBus(null);
       await fetchBuses();
+      toast.success("Cập nhật xe bus thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật xe bus");
     } finally {
@@ -101,6 +105,7 @@ const ManagerBus = () => {
       await deleteBus(bus._id);
       await fetchBuses();
       setDeleteConfirmId(null);
+      toast.success("Xoá xe bus thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá xe bus");
     }
@@ -115,6 +120,23 @@ const ManagerBus = () => {
     setShowCreateModal(false);
   };
   const handleCreateBus = async () => {
+    // Validate required fields
+    if (!newBus.licensePlate) {
+      toast.error("Vui lòng nhập biển số xe!");
+      return;
+    }
+    if (!newBus.busType) {
+      toast.error("Vui lòng chọn loại xe!");
+      return;
+    }
+    if (!newBus.seatCount || isNaN(Number(newBus.seatCount)) || Number(newBus.seatCount) <= 0) {
+      toast.error("Vui lòng nhập số ghế hợp lệ!");
+      return;
+    }
+    if (!newBus.status) {
+      toast.error("Vui lòng chọn trạng thái!");
+      return;
+    }
     setCreateLoading(true);
     setCreateError("");
     try {
@@ -255,35 +277,14 @@ const ManagerBus = () => {
       ) : (
         <>
           <BasicTable columns={columns} data={paginatedBuses} rowKey="_id" />
-          {/* Pagination controls */}
-          <div className="flex justify-between items-center mt-4">
-            <div>
-              Trang {currentPage} / {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Trước
-              </button>
-              <button
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Sau
-              </button>
-            </div>
-            <div>
-              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
-                {[5, 10, 20, 50].map(size => (
-                  <option key={size} value={size}>{size} / trang</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
         </>
       )}
       {showModal && selectedBus && (
