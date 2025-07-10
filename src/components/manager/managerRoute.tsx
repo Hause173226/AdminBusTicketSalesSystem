@@ -9,6 +9,7 @@ import { Station } from "../type";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
+import Pagination from "../common/Pagination";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-700 border border-green-300 font-bold",
@@ -51,7 +52,7 @@ const ManagerRoute = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [searchRoute, setSearchRoute] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(6);
 
   const handleView = (route: Route) => {
     setSelectedRoute(route);
@@ -66,7 +67,10 @@ const ManagerRoute = () => {
     setLoading(true);
     try {
       const data = await getAllRoutes();
-      setRoutes(Array.isArray(data) ? data : [data]);
+      const arr = Array.isArray(data) ? data : [data];
+      // Sort by createdAt descending (newest first)
+      arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setRoutes(arr);
     } catch (err) {
       setError("Lỗi khi lấy dữ liệu tuyến đường");
     } finally {
@@ -108,6 +112,31 @@ const ManagerRoute = () => {
   };
 
   const handleCreateRoute = async () => {
+    // Validate required fields
+    if (!newRoute.code) {
+      toast.error("Vui lòng nhập mã tuyến!");
+      return;
+    }
+    if (!newRoute.originStation) {
+      toast.error("Vui lòng chọn điểm đi!");
+      return;
+    }
+    if (!newRoute.destinationStation) {
+      toast.error("Vui lòng chọn điểm đến!");
+      return;
+    }
+    if (!newRoute.distanceKm || isNaN(Number(newRoute.distanceKm)) || Number(newRoute.distanceKm) <= 0) {
+      toast.error("Vui lòng nhập khoảng cách hợp lệ!");
+      return;
+    }
+    if (!newRoute.estimatedDuration || isNaN(Number(newRoute.estimatedDuration)) || Number(newRoute.estimatedDuration) <= 0) {
+      toast.error("Vui lòng nhập thời gian dự kiến hợp lệ!");
+      return;
+    }
+    if (!newRoute.status) {
+      toast.error("Vui lòng chọn trạng thái!");
+      return;
+    }
     setCreateLoading(true);
     setCreateError("");
     try {
@@ -316,35 +345,14 @@ const ManagerRoute = () => {
       ) : (
         <>
           <BasicTable columns={columns} data={paginatedRoutes} rowKey="_id" />
-          {/* Pagination controls */}
-          <div className="flex justify-between items-center mt-4">
-            <div>
-              Trang {currentPage} / {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Trước
-              </button>
-              <button
-                disabled={currentPage === totalPages || totalPages === 0}
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                className="px-3 py-1 border rounded disabled:opacity-50"
-              >
-                Sau
-              </button>
-            </div>
-            <div>
-              <select aria-label="Chọn số lượng bản ghi mỗi trang" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
-                {[5, 10, 20, 50].map(size => (
-                  <option key={size} value={size}>{size} / trang</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
         </>
       )}
       {/* Modal xem chi tiết tuyến đường */}
@@ -394,11 +402,11 @@ const ManagerRoute = () => {
               { label: "Trạng thái", value: newRoute.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setNewRoute((r: any) => ({ ...r, status: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: newRoute.originStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đi", value: newRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const originId = e.target.value;
                 setNewRoute((r: any) => ({ ...r, originStation: originId }));
               }},
-              { label: "Điểm đến", value: newRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const destId = e.target.value;
                 setNewRoute((r: any) => ({ ...r, destinationStation: destId }));
               }},
@@ -427,7 +435,7 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: editRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, name: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: editRoute.originStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đi", value: editRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const originId = e.target.value;
                 const city1 = getCityByStationId(originId);
                 const city2 = getCityByStationId(editRoute.destinationStation);
@@ -435,7 +443,7 @@ const ManagerRoute = () => {
                 const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : editRoute.code;
                 setEditRoute((r: any) => ({ ...r, originStation: originId, name, code }));
               }},
-              { label: "Điểm đến", value: editRoute.destinationStation, type: "select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đến", value: editRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const destId = e.target.value;
                 const city1 = getCityByStationId(editRoute.originStation);
                 const city2 = getCityByStationId(destId);

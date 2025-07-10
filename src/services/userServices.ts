@@ -50,4 +50,11 @@ export const userServices = {
   deleteUser: (id: string) => {
     return axiosInstance.delete(`/users/${id}`);
   },
+  // LẤY PROFILE VÀ UPDATE PROFILE
+  getProfile: () => {
+    return axiosInstance.get("/users/profile");
+  },
+  updateProfile: (data: any) => {
+    return axiosInstance.put("/users/profile", data);
+  },
 };
