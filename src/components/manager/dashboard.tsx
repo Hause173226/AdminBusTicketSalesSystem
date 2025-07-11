@@ -45,6 +45,32 @@ const tableData = [
   { name: "Marketplace", progress: "12.2%", quantity: 258, date: "24 Oct 2022" },
 ];
 
+const renderCustomLabel = ({
+  cx, cy, midAngle, innerRadius, outerRadius, value
+}: any) => {
+  if (!value) return null;
+  const RADIAN = Math.PI / 180;
+  // Đặt label ở giữa sector
+  const radius = innerRadius + (outerRadius - innerRadius) / 2;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#fff"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={18}
+      fontWeight={700}
+      stroke="#333"
+      strokeWidth={0.5}
+    >
+      {value}
+    </text>
+  );
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState([
     { label: "Earnings", value: "-", icon: "📈" },
@@ -262,7 +288,7 @@ const Dashboard = () => {
             <div className="h-32 w-32">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} fill="#8884d8" label>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={50} fill="#8884d8" label={renderCustomLabel} labelLine={false}>
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={["#4F46E5", "#38BDF8", "#A5B4FC", "#F59E42"][index % 4]} />
                     ))}

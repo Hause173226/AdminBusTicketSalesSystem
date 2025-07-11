@@ -16,6 +16,7 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Dashboard from "./components/manager/dashboard";
 import { UserProvider } from './contexts/UserContext';
+import ManagerStation from "./components/manager/managerStation";
 
 const Logout = () => {
   const { logout } = useAuth();
@@ -46,6 +47,7 @@ const AppContent = () => {
     if (pathname.startsWith("/feedback")) return "feedback";
     if (pathname.startsWith("/settings")) return "settings";
     if (pathname.startsWith("/profile")) return "profile";
+    if (pathname.startsWith("/stations")) return "stations";
     return "dashboard";
   };
 
@@ -121,6 +123,11 @@ const AppContent = () => {
             <Route path="/bookings" element={
               <PrivateRoute>
                 <ManagerBooking />
+              </PrivateRoute>
+            } />
+            <Route path="/stations" element={
+              <PrivateRoute>
+                <ManagerStation />
               </PrivateRoute>
             } />
             <Route path="/profile" element={
