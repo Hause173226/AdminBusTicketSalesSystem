@@ -6,6 +6,7 @@ import BasicModal from "../modal/BasicModal";
 import Pagination from "../common/Pagination";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
+import ConfirmPopover from "../common/ConfirmPopover";
 
 const ManagerBooking: React.FC = () => {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -15,6 +16,8 @@ const ManagerBooking: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
   const [searchValue, setSearchValue] = useState("");
+  const [bookingToCancel, setBookingToCancel] = useState<any | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState<string | false>(false);
 
   // Handler functions
   function handleView(row: any) {
@@ -22,22 +25,11 @@ const ManagerBooking: React.FC = () => {
     setModalOpen(true);
   }
   function handleEdit(row: any) {
+    toast.info("Chức năng chỉnh sửa booking chưa được triển khai");
     // TODO: mở modal sửa booking
-    console.log("Edit booking", row);
+    // console.log("Edit booking", row);
   }
-  function handleDelete(row: any) {
-    // TODO: xác nhận xoá booking
-    // console.log("Delete booking", row);
-    toast.info("Chức năng xoá booking chưa được triển khai");
-  }
-
-  // Helper để lấy tên chuyến xe từ trip
-  function getTripName(trip: any) {
-    if (trip?.route?.name) return trip.route.name;
-    return trip?.tripCode || trip?._id || "Không xác định";
-  }
-
-  // Columns definition
+  // Sửa nút huỷ trong columns
   const columns = [
     { key: "bookingCode", label: "Mã Booking" },
     { key: "customer", label: "Khách hàng", render: (v: any) => v?.fullName || v?.name || v?._id || "" },
@@ -64,17 +56,56 @@ const ManagerBooking: React.FC = () => {
           >
             <Pencil size={18} />
           </button>
-          <button
-            className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-            title="Xoá"
-            onClick={() => handleDelete(row)}
-          >
-            <Trash2 size={18} />
-          </button>
+          <div className="relative">
+            <button
+              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Huỷ booking"
+              onClick={() => {
+                setBookingToCancel(row);
+                setConfirmOpen(row._id);
+              }}
+            >
+              <Trash2 size={18} />
+            </button>
+            {confirmOpen === row._id && (
+              <ConfirmPopover
+                open={true}
+                message={<span>Bạn có chắc chắn<br />muốn <b>huỷ booking</b> này?</span>}
+                onCancel={() => {
+                  setConfirmOpen(false);
+                  setBookingToCancel(null);
+                }}
+                onConfirm={() => {
+                  bookingService.cancelBooking(row._id)
+                    .then(res => {
+                      toast.success("Huỷ booking thành công!");
+                      setBookings(prev =>
+                        prev.map(b =>
+                          b._id === row._id ? { ...b, bookingStatus: "cancelled" } : b
+                        )
+                      );
+                    })
+                    .catch(err => {
+                      toast.error("Huỷ booking thất bại: " + (err?.response?.data?.message || err.message));
+                    })
+                    .finally(() => {
+                      setConfirmOpen(false);
+                      setBookingToCancel(null);
+                    });
+                }}
+              />
+            )}
+          </div>
         </div>
       ),
     },
   ];
+
+  // Helper để lấy tên chuyến xe từ trip
+  function getTripName(trip: any) {
+    if (trip?.route?.name) return trip.route.name;
+    return trip?.tripCode || trip?._id || "Không xác định";
+  }
 
   useEffect(() => {
     bookingService.getAllBookings().then((data) => {
@@ -128,7 +159,7 @@ const ManagerBooking: React.FC = () => {
     : [];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách Booking</h3>
         <div className="flex items-center gap-2 ml-auto">
@@ -138,7 +169,9 @@ const ManagerBooking: React.FC = () => {
             placeholder="Tìm kiếm tên khách hàng..."
             debounceMs={1000}
           />
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+            onClick={() => toast.info("Chức năng thêm booking mới chưa được triển khai")}
+          >
             Thêm booking mới
           </button>
         </div>

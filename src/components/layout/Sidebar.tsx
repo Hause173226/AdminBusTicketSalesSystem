@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X, MapPin, LogOut, User, Home } from "lucide-react";
+import { Bus, Truck, UserCheck, Users, CreditCard, MessageSquare, Settings, X, MapPin, LogOut, User, Home, Landmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "trips", label: "Quản lý chuyến xe", icon: Bus },
   { id: "routes", label: "Quản lý tuyến đường", icon: MapPin },
+  { id: "stations", label: "Quản lý trạm xe", icon: Landmark },
   { id: "vehicles", label: "Quản lý xe", icon: Truck },
   { id: "drivers", label: "Quản lý tài xế", icon: UserCheck },
   { id: "users", label: "Quản lý người dùng", icon: Users },
@@ -108,6 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar, activeM
                   if (item.id === "dashboard") navigate("/dashboard");
                   if (item.id === "trips") navigate("/trips");
                   if (item.id === "routes") navigate("/routes");
+                  if (item.id === "stations") navigate("/stations");
                   if (item.id === "vehicles") navigate("/bus");
                   if (item.id === "drivers") navigate("/drivers");
                   if (item.id === "users") navigate("/users");

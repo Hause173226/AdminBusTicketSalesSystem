@@ -19,6 +19,10 @@ const headerInfo: Record<string, { title: string; subtitle: string }> = {
     title: "Quản lý tuyến đường",
     subtitle: "Quản lý và theo dõi các tuyến đường trong hệ thống",
   },
+  "/stations": {
+    title: "Quản lý trạm xe",
+    subtitle: "Quản lý và theo dõi các trạm xe trong hệ thống",
+  },
   "/bus": {
     title: "Quản lý xe",
     subtitle: "Quản lý và theo dõi các xe trong hệ thống",
