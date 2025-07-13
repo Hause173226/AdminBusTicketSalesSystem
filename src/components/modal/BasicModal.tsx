@@ -12,6 +12,7 @@ interface Field {
   onChange?: (e: React.ChangeEvent<any>) => void;
   readOnly?: boolean;
   error?: string; 
+  min?: string; 
 }
 
 interface BasicModalProps {
@@ -111,6 +112,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             title={field.label}
                             onChange={field.onChange}
                             readOnly={field.readOnly}
+                            min={field.min} 
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">

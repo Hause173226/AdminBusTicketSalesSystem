@@ -102,6 +102,9 @@ const ManagerTrip = () => {
   const [pageSize, setPageSize] = useState(5);
   const [seatMap, setSeatMap] = useState<any[]>([]);
   const [availableSeatCount, setAvailableSeatCount] = useState<number>(0);
+  // Thêm state lưu các busId và driverId đang bận
+  const [busyBusIds, setBusyBusIds] = useState<string[]>([]);
+  const [busyDriverIds, setBusyDriverIds] = useState<string[]>([]);
 
   const handleView = async (trip: any) => {
     setSelectedTrip(trip);
@@ -166,7 +169,7 @@ const ManagerTrip = () => {
       key: "basePriceDisplay", label: "Giá vé"
     },
     {
-      key: "availableSeats", label: "Ghế có sẵn",
+      key: "availableSeats", label: "Ghế còn trống",
       render: (value: number) => value || 0
     },
     {
@@ -257,6 +260,25 @@ const ManagerTrip = () => {
     };
     fetchRoutesBusesDrivers();
   }, []);
+
+  // Hàm lọc xe có thể chọn
+  const getAvailableBuses = () => {
+    return buses.filter(b => !busyBusIds.includes(b._id) || b._id === newTrip.bus);
+  };
+  // Hàm lọc tài xế có thể chọn
+  const getAvailableDrivers = () => {
+    return drivers.filter(d => !busyDriverIds.includes(d._id) || d._id === newTrip.driver);
+  };
+
+  // Khi fetchTrips xong, xác định các bus/tài xế đang bận
+  useEffect(() => {
+    const updateBusyResources = () => {
+      const busyTrips = routeData.filter(trip => ["scheduled", "in_progress"].includes(trip.status));
+      setBusyBusIds(busyTrips.map(trip => typeof trip.bus === 'object' ? trip.bus._id : trip.bus));
+      setBusyDriverIds(busyTrips.map(trip => typeof trip.driver === 'object' ? trip.driver._id : trip.driver));
+    };
+    updateBusyResources();
+  }, [routeData]);
   // Thêm hàm formatTime để chuẩn hóa giờ sang HH:mm
   const formatTime = (time: string) => {
     if (!time) return "";
@@ -563,12 +585,11 @@ const ManagerTrip = () => {
               { label: "Giờ đến", value: selectedTrip.arrivalTime || "", type: "text", icon: <Clock size={16} /> },
             ],
             [
-              { label: "Ghế có sẵn", value: selectedTrip.availableSeats || 0, type: "text", icon: <Users size={16} /> },
+              
               { label: "Ghế còn trống", value: availableSeatCount, type: "text", icon: <Users size={16} /> },
-            ],
-            [
               { label: "Trạng thái", value: statusLabel[selectedTrip.status] || selectedTrip.status, type: "text" },
             ],
+          
             [
               { label: "Ghi chú", value: selectedTrip.notes || "", type: "text", icon: <Info size={16} />, colSpan: 2 },
             ],
@@ -595,11 +616,11 @@ const ManagerTrip = () => {
               })), onChange: (e: any) => handleRouteChange(e),  colSpan: 2 },
             ],
             [
-              { label: "Xe", value: newTrip.bus, type: "searchable-select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => handleBusChange(e) },
-              { label: "Tài xế", value: newTrip.driver, type: "searchable-select", options: drivers.map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, driver: e.target.value })) },
+              { label: "Xe", value: newTrip.bus, type: "searchable-select", options: getAvailableBuses().map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => handleBusChange(e) },
+              { label: "Tài xế", value: newTrip.driver, type: "searchable-select", options: getAvailableDrivers().map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, driver: e.target.value })) },
             ],
             [
-              { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
+              { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })), min: new Date().toISOString().slice(0, 10) },
               { label: "Giờ đi", value: newTrip.departureTime, type: "time", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
             ],
             [
@@ -663,7 +684,7 @@ const ManagerTrip = () => {
             ],
             [
               { label: "Giờ đi", value: editTrip.departureTime, type: "time", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
-              { label: "Ngày xuất phát", value: editTrip.departureDate ? new Date(editTrip.departureDate).toISOString().slice(0, 10) : "", type: "date", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureDate: e.target.value })) },
+              { label: "Ngày xuất phát", value: editTrip.departureDate ? new Date(editTrip.departureDate).toISOString().slice(0, 10) : "", type: "date", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, departureDate: e.target.value })), min: new Date().toISOString().slice(0, 10) },
             ],
             [
               {

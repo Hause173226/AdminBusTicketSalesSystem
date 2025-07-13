@@ -9,6 +9,7 @@ import ManagerUser from "./components/manager/managerUser";
 import ManagerDriver from "./components/manager/managerDriver";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminProfile from "./components/AdminProfile";
 import ManagerBooking from "./components/manager/managerbooking";
@@ -17,6 +18,7 @@ import "react-toastify/dist/ReactToastify.css";
 import Dashboard from "./components/manager/dashboard";
 import { UserProvider } from './contexts/UserContext';
 import ManagerStation from "./components/manager/managerStation";
+import LoadingOverlay from "./components/common/LoadingOverlay";
 
 const Logout = () => {
   const { logout } = useAuth();
@@ -33,6 +35,7 @@ const AppContent = () => {
   const [activeMenuItem, setActiveMenuItem] = useState("dashboard");
   const location = useLocation();
   const { user, isAdmin, loading } = useAuth();
+  const { isLoading } = useLoading();
 
   // Map path to menu id
   const pathToMenuId = (pathname: string) => {
@@ -143,6 +146,7 @@ const AppContent = () => {
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={toggleSidebar} />
       )}
+      <LoadingOverlay isLoading={isLoading} />
     </div>
   );
 };
@@ -151,9 +155,11 @@ function App() {
   return (
     <UserProvider>
       <Router>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <LoadingProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </LoadingProvider>
         <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
       </Router>
     </UserProvider>
