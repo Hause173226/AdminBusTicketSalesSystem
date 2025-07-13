@@ -144,8 +144,7 @@ const ManagerBus = () => {
         licensePlate: newBus.licensePlate,
         busType: newBus.busType,
         seatCount: Number(newBus.seatCount),
-        status: newBus.status,
-        image: newBus.image
+        status: newBus.status
       };
       await createBus(payload);
       setShowCreateModal(false);
@@ -167,18 +166,6 @@ const ManagerBus = () => {
   const paginatedBuses = filteredBuses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
-    {
-      key: "image",
-      label: "Ảnh",
-      render: (value: string) =>
-        value ? (
-          <img
-            src={value}
-            alt="Bus"
-            style={{ width: 60, height: 40, objectFit: "cover", borderRadius: 6 }}
-          />
-        ) : null,
-    },
     { key: "licensePlate", label: "Biển số" },
     { key: "busType", label: "Loại xe" },
     { key: "seatCount", label: "Số ghế" },
@@ -235,26 +222,7 @@ const ManagerBus = () => {
     },
   ];
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("image", file);
-    try {
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (isEdit) {
-        setEditBus((b: any) => ({ ...b, image: data.url }));
-      } else {
-        setNewBus((b: any) => ({ ...b, image: data.url }));
-      }
-    } catch (err) {
-      toast.error("Lỗi upload ảnh");
-    }
-  };
+
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -336,12 +304,7 @@ const ManagerBus = () => {
               ], onChange: (e: any) => setEditBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
           ]}
-          children={
-            <div style={{ marginTop: 12 }}>
-              <input type="file" accept="image/*" onChange={e => handleImageChange(e, true)} title="Chọn ảnh xe bus" placeholder="Chọn ảnh xe bus" />
-              {editBus.image && <img src={editBus.image} alt="Bus preview" style={{ width: 100, marginTop: 8 }} />}
-            </div>
-          }
+
         />
       )}
       {showCreateModal && (
@@ -373,12 +336,7 @@ const ManagerBus = () => {
               ], onChange: (e: any) => setNewBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
           ]}
-          children={
-            <div style={{ marginTop: 12 }}>
-              <input type="file" accept="image/*" onChange={e => handleImageChange(e)} title="Chọn ảnh xe bus" placeholder="Chọn ảnh xe bus" />
-              {newBus.image && <img src={newBus.image} alt="Bus preview" style={{ width: 100, marginTop: 8 }} />}
-            </div>
-          }
+
         />
       )}
     </div>

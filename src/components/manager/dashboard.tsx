@@ -108,7 +108,7 @@ const Dashboard = () => {
           earnings = bookings.filter(b => b.paymentStatus === "paid").reduce((sum, b) => sum + (b.totalAmount || 0), 0);
         }
         setStats([
-          { label: "Earnings", value: `$${earnings.toLocaleString()}`, icon: "📈" },
+          { label: "Earnings", value: `${earnings.toLocaleString('vi-VN')} VNĐ`, icon: "📈" },
           { label: "Total Bookings", value: bookings.length, icon: "📝" },
           { label: "Total Users", value: users.length, icon: "👤" },
           { label: "Total Trips", value: trips.length, icon: "🚌" },
@@ -201,6 +201,7 @@ const Dashboard = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6">Main Dashboard</h1>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {stats.slice(0, 6).map((stat, i) => (
@@ -221,7 +222,7 @@ const Dashboard = () => {
               <span className="text-gray-400 text-sm">Total Spent</span>
             </div>
             <div className="flex items-end gap-4">
-              <span className="text-3xl font-bold">${lineData.length ? lineData[new Date().getMonth()].value.toLocaleString() : 0}</span>
+              <span className="text-3xl font-bold">{lineData.length ? lineData[new Date().getMonth()].value.toLocaleString('vi-VN') : 0} VNĐ</span>
               {/* Có thể thêm % tăng giảm nếu muốn */}
             </div>
             <div className="h-40 mt-4">
@@ -256,7 +257,7 @@ const Dashboard = () => {
                     <td className="py-2 font-medium">{row.bookingCode}</td>
                     <td>{row.customer?.fullName || '-'}</td>
                     <td>{row.seatNumbers?.join(', ')}</td>
-                    <td>{row.totalAmount?.toLocaleString()}</td>
+                    <td>{row.totalAmount?.toLocaleString('vi-VN')} VNĐ</td>
                     <td>{new Date(row.createdAt).toLocaleDateString()}</td>
                     <td>{row.paymentStatus || row.bookingStatus}</td>
                   </tr>

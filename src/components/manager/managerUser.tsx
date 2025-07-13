@@ -307,7 +307,11 @@ const ManagerUser = () => {
           subtitle={
             <div className="flex items-center gap-2">
               <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold uppercase">
-                {selectedUser.role || "USER"}
+                {selectedUser.role === "admin"
+                  ? "QUẢN TRỊ VIÊN"
+                  : selectedUser.role === "user"
+                  ? "NGƯỜI DÙNG"
+                  : (selectedUser.role || "NGƯỜI DÙNG").toUpperCase()}
               </span>
               <span className="text-gray-500 text-xs">Thông tin chi tiết người dùng</span>
             </div>
@@ -325,7 +329,7 @@ const ManagerUser = () => {
             ],
             [
               { label: "Ngày sinh", value: selectedUser.dateOfBirth ? new Date(selectedUser.dateOfBirth).toLocaleDateString("vi-VN") : "", type: "text", icon: <CalendarIcon size={18} /> },
-              { label: "Giới tính", value: selectedUser.gender || "", type: "text" },
+              { label: "Giới tính", value: selectedUser.gender === "male" ? "Nam" : selectedUser.gender === "female" ? "Nữ" : selectedUser.gender === "other" ? "Khác" : (selectedUser.gender || ""), type: "text" },
             ],
             [
               { label: "Địa chỉ", value: selectedUser.address || "", type: "text", colSpan: 2, icon: <MapPin size={18} /> },
@@ -360,7 +364,7 @@ const ManagerUser = () => {
               { label: "Địa chỉ", value: editFields.address, type: "text", colSpan: 2, icon: <MapPin size={18} />, onChange: (e: any) => handleEditFieldChange("address", e.target.value) },
             ],
             [
-              { label: "Vai trò", value: editFields.role, type: "select", options: [ { label: "User", value: "user" }, { label: "Admin", value: "admin" } ], onChange: (e: any) => handleEditFieldChange("role", e.target.value) },
+              { label: "Vai trò", value: editFields.role, type: "select", options: [ { label: "Người dùng", value: "user" }, { label: "Quản trị viên", value: "admin" } ], onChange: (e: any) => handleEditFieldChange("role", e.target.value) },
             ],
           ]}
         />

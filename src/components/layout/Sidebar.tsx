@@ -6,7 +6,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "trips", label: "Quản lý chuyến xe", icon: Bus },
   { id: "routes", label: "Quản lý tuyến đường", icon: MapPin },
-  { id: "stations", label: "Quản lý trạm xe", icon: Landmark },
+  { id: "stations", label: "Quản lý trạm", icon: Landmark },
   { id: "vehicles", label: "Quản lý xe", icon: Truck },
   { id: "drivers", label: "Quản lý tài xế", icon: UserCheck },
   { id: "users", label: "Quản lý người dùng", icon: Users },

@@ -1,12 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { bookingService } from "../../services/bookingServic";
 import BasicTable from "../tables/BasicTable";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, CheckCircle, XCircle, Clock, CreditCard, DollarSign } from "lucide-react";
 import BasicModal from "../modal/BasicModal";
 import Pagination from "../common/Pagination";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
 import ConfirmPopover from "../common/ConfirmPopover";
+
+// Status styling for booking status
+const bookingStatusColor: Record<string, string> = {
+  "confirmed": "bg-green-100 text-green-700 border border-green-300 font-bold",
+  "pending": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
+  "cancelled": "bg-red-100 text-red-700 border border-red-300 font-bold",
+  "completed": "bg-blue-100 text-blue-700 border border-blue-300 font-bold",
+};
+
+const bookingStatusIcon: Record<string, JSX.Element> = {
+  "confirmed": <CheckCircle size={16} className="inline mr-1" />,
+  "pending": <Clock size={16} className="inline mr-1" />,
+  "cancelled": <XCircle size={16} className="inline mr-1" />,
+  "completed": <CheckCircle size={16} className="inline mr-1" />,
+};
+
+const bookingStatusLabel: Record<string, string> = {
+  "confirmed": "Đã xác nhận",
+  "pending": "Chờ xác nhận",
+  "cancelled": "Đã huỷ",
+  "completed": "Hoàn thành",
+};
+
+// Status styling for payment status
+const paymentStatusColor: Record<string, string> = {
+  "paid": "bg-green-100 text-green-700 border border-green-300 font-bold",
+  "pending": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
+  "failed": "bg-red-100 text-red-700 border border-red-300 font-bold",
+  "refunded": "bg-gray-100 text-gray-700 border border-gray-300 font-bold",
+  "unpaid": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold", // Đổi sang vàng
+};
+
+const paymentStatusIcon: Record<string, JSX.Element> = {
+  "paid": <DollarSign size={16} className="inline mr-1" />,
+  "pending": <Clock size={16} className="inline mr-1" />,
+  "failed": <XCircle size={16} className="inline mr-1" />,
+  "refunded": <CreditCard size={16} className="inline mr-1" />,
+  "unpaid": <XCircle size={16} className="inline mr-1" />,
+};
+
+const paymentStatusLabel: Record<string, string> = {
+  "paid": "Đã thanh toán",
+  "pending": "Chờ thanh toán",
+  "failed": "Thanh toán thất bại",
+  "refunded": "Đã hoàn tiền",
+  "unpaid": "Chưa thanh toán",
+};
 
 const ManagerBooking: React.FC = () => {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -35,8 +82,24 @@ const ManagerBooking: React.FC = () => {
     { key: "customer", label: "Khách hàng", render: (v: any) => v?.fullName || v?.name || v?._id || "" },
     { key: "trip", label: "Tuyến xe", render: (_: any, row: any) => getTripName(row.trip) },
     { key: "totalAmount", label: "Tổng tiền", render: (v: any) => v?.toLocaleString('vi-VN') + " VNĐ" },
-    { key: "bookingStatus", label: "Trạng thái" },
-    { key: "paymentStatus", label: "Thanh toán" },
+    { 
+      key: "bookingStatus", 
+      label: "Trạng thái",
+      render: (value: string) => (
+        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${bookingStatusColor[value] || "bg-gray-100 text-gray-800"}`}>
+          {bookingStatusIcon[value]} {bookingStatusLabel[value] || value}
+        </span>
+      ),
+    },
+    { 
+      key: "paymentStatus", 
+      label: "Thanh toán",
+      render: (value: string) => (
+        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${paymentStatusColor[value] || "bg-gray-100 text-gray-800"}`}>
+          {paymentStatusIcon[value]} {paymentStatusLabel[value] || value}
+        </span>
+      ),
+    },
     {
       key: "action",
       label: "Action",
@@ -48,13 +111,6 @@ const ManagerBooking: React.FC = () => {
             onClick={() => handleView(row)}
           >
             <Eye size={18} />
-          </button>
-          <button
-            className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-            title="Chỉnh sửa"
-            onClick={() => handleEdit(row)}
-          >
-            <Pencil size={18} />
           </button>
           <div className="relative">
             <button
@@ -117,12 +173,13 @@ const ManagerBooking: React.FC = () => {
     });
   }, []);
 
-  // Filter bookings by customer name
+  // Filter bookings by customer name or booking code
   const filteredBookings = bookings.filter(b => {
     const v = searchValue.toLowerCase();
     return (
       b.customer?.fullName?.toLowerCase().includes(v) ||
-      b.customer?.name?.toLowerCase().includes(v)
+      b.customer?.name?.toLowerCase().includes(v) ||
+      b.bookingCode?.toLowerCase().includes(v)
     );
   });
   const totalPages = Math.ceil(filteredBookings.length / pageSize);
@@ -148,11 +205,11 @@ const ManagerBooking: React.FC = () => {
           { label: "Tổng tiền", value: selectedBooking.totalAmount?.toLocaleString('vi-VN') + " VNĐ" },
         ],
         [
-          { label: "Trạng thái", value: selectedBooking.bookingStatus },
-          { label: "Thanh toán", value: selectedBooking.paymentStatus },
+          { label: "Trạng thái", value: bookingStatusLabel[selectedBooking.bookingStatus] || selectedBooking.bookingStatus },
+          { label: "Thanh toán", value: paymentStatusLabel[selectedBooking.paymentStatus] || selectedBooking.paymentStatus },
         ],
         [
-          { label: "Phương thức thanh toán", value: selectedBooking.paymentMethod || "Chưa chọn" },
+          { label: "Phương thức thanh toán", value: selectedBooking.paymentMethod === "online" ? "Online" : selectedBooking.paymentMethod === "offline" ? "Tại quầy" : (selectedBooking.paymentMethod || "Chưa chọn") },
           { label: "Ghi chú", value: selectedBooking.notes || "Không có" },
         ],
       ]
@@ -166,14 +223,9 @@ const ManagerBooking: React.FC = () => {
           <SearchInput
             value={searchValue}
             onChange={e => { setSearchValue(e.target.value); setCurrentPage(1); }}
-            placeholder="Tìm kiếm tên khách hàng..."
+            placeholder="Tìm kiếm..."
             debounceMs={1000}
           />
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-            onClick={() => toast.info("Chức năng thêm booking mới chưa được triển khai")}
-          >
-            Thêm booking mới
-          </button>
         </div>
       </div>
       {loading ? (
