@@ -173,7 +173,7 @@ const ManagerStation = () => {
       key: "status",
       label: "Trạng thái",
       render: (value: string) => (
-        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
+        <span className={`px-1 py-0.5 text-xs rounded min-w-[140px] flex items-center justify-center gap-0.5 ${statusColor[value] || "bg-gray-100 text-gray-800"}`}>
           {statusIcon[value]} {statusLabel[value] || value}
         </span>
       ),
@@ -352,9 +352,7 @@ const ManagerStation = () => {
               ],
             [
                 { label: "Quận/Huyện", value: newStation.address.district, type: "text", onChange: (e: any) => setNewStation((r: any) => ({ ...r, address: { ...r.address, district: e.target.value } })) },
-              { label: "Trạng thái", value: newStation.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setNewStation((r: any) => ({ ...r, status: e.target.value })) },
             ],
-          
           ]}
         />
       )}

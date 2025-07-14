@@ -27,6 +27,14 @@ const statusLabel: Record<string, string> = {
   inactive: "Ngừng hoạt động",
 };
 
+// Thêm hàm ánh xạ loại xe sang tiếng Việt
+const busTypeLabel: Record<string, string> = {
+  standard: "Thường",
+  sleeper: "Giường nằm",
+  limousine: "Limousine",
+  vip: "VIP",
+};
+
 let handleView: (bus: any) => void;
 
 const ManagerBus = () => {
@@ -167,7 +175,7 @@ const ManagerBus = () => {
 
   const columns = [
     { key: "licensePlate", label: "Biển số" },
-    { key: "busType", label: "Loại xe" },
+    { key: "busType", label: "Loại xe", render: (value: string) => busTypeLabel[value] || value },
     { key: "seatCount", label: "Số ghế" },
     {
       key: "status",
@@ -266,7 +274,7 @@ const ManagerBus = () => {
           rows={[
             [
               { label: "Biển số", value: selectedBus.licensePlate || "", type: "text", icon: <Hash size={18} /> },
-              { label: "Loại xe", value: selectedBus.busType || "", type: "text", icon: <Settings size={18} /> },
+              { label: "Loại xe", value: busTypeLabel[selectedBus.busType] || selectedBus.busType || "", type: "text", icon: <Settings size={18} /> },
             ],
             [
               { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Hash size={18} /> },
@@ -304,7 +312,6 @@ const ManagerBus = () => {
               ], onChange: (e: any) => setEditBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
           ]}
-
         />
       )}
       {showCreateModal && (
@@ -329,14 +336,8 @@ const ManagerBus = () => {
             ],
             [
               { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
-              { label: "Trạng thái", value: newBus.status, type: "select", options: [
-                { label: "Hoạt động", value: "active" },
-                { label: "Bảo trì", value: "maintenance" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-              ], onChange: (e: any) => setNewBus((b: any) => ({ ...b, status: e.target.value })) },
             ],
           ]}
-
         />
       )}
     </div>

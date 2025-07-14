@@ -169,7 +169,7 @@ const ManagerTrip = () => {
       key: "basePriceDisplay", label: "Giá vé"
     },
     {
-      key: "availableSeats", label: "Ghế còn trống",
+      key: "availableSeats", label: "Ghế trống",
       render: (value: number) => value || 0
     },
     {
@@ -615,13 +615,14 @@ const ManagerTrip = () => {
                 value: r._id
               })), onChange: (e: any) => handleRouteChange(e),  colSpan: 2 },
             ],
-            [
-              { label: "Xe", value: newTrip.bus, type: "searchable-select", options: getAvailableBuses().map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => handleBusChange(e) },
-              { label: "Tài xế", value: newTrip.driver, type: "searchable-select", options: getAvailableDrivers().map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, driver: e.target.value })) },
-            ],
+            
             [
               { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })), min: new Date().toISOString().slice(0, 10) },
               { label: "Giờ đi", value: newTrip.departureTime, type: "time", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
+            ],
+            [
+              { label: "Xe", value: newTrip.bus, type: "searchable-select", options: getAvailableBuses().map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => handleBusChange(e) },
+              { label: "Tài xế", value: newTrip.driver, type: "searchable-select", options: getAvailableDrivers().map(d => ({ label: d.fullName, value: d._id })), onChange: (e: any) => setNewTrip((r: any) => ({ ...r, driver: e.target.value })) },
             ],
             [
               {
@@ -635,16 +636,9 @@ const ManagerTrip = () => {
                   }
                 }
               },
-              { label: "Trạng thái", value: newTrip.status, type: "select", options: [
-                { label: "Đã lên lịch", value: "scheduled" },
-                { label: "Đang chạy", value: "in_progress" },
-                { label: "Hoàn thành", value: "completed" },
-                { label: "Đã huỷ", value: "cancelled" },
-              ], onChange: (e: any) => setNewTrip((r: any) => ({ ...r, status: e.target.value })) },
-            ],
-            [
               { label: "Ghế có sẵn", value: newTrip.availableSeats, type: "number", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, availableSeats: e.target.value })) },
             ],
+            
             [
               { label: "Ghi chú", value: newTrip.notes, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
             ],

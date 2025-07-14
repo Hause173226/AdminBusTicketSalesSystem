@@ -41,17 +41,17 @@ const LoginPage: React.FC = () => {
           <img src="/src/assets/bus2.png" alt="Bus" className="w-full h-full object-cover rounded-none" />
         </div>
         {/* Right side - Form */}
-        <div className="bg-white bg-opacity-90 p-10 w-full md:w-1/2 flex flex-col justify-center h-full">
-          <h2 className="text-3xl font-extrabold mb-10 text-red-500 text-center drop-shadow">Đăng nhập</h2>
+        <div className="bg-[#0a2342] p-10 w-full md:w-1/2 flex flex-col justify-center h-full">
+          <h2 className="text-3xl font-extrabold mb-10 text-white text-center drop-shadow">Đăng nhập</h2>
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6 flex items-start">
-              <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-red-900 bg-opacity-20 border border-red-400 rounded-md p-4 mb-6 flex items-start">
+              <AlertCircle className="h-5 w-5 text-red-300 mr-2 mt-0.5" />
+              <p className="text-red-200 text-sm">{error}</p>
             </div>
           )}
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-white mb-1">
                 Email 
               </label>
               <div className="relative">
@@ -60,14 +60,14 @@ const LoginPage: React.FC = () => {
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-blue-900 bg-transparent rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-white"
                   placeholder="admin@email.com"
                 />
-                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-blue-200" />
               </div>
             </div>
             <div className="mb-4">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-white mb-1">
                 Mật khẩu
               </label>
               <div className="relative">
@@ -76,15 +76,15 @@ const LoginPage: React.FC = () => {
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-blue-900 bg-transparent rounded-lg pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-white"
                   placeholder="••••••••"
                 />
-                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-blue-200" />
               </div>
               <div className="flex justify-end mt-1">
                 <Link 
                   to="/forgot-password" 
-                  className="text-sm text-blue-700 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 -mx-2 transition-colors duration-200"
+                  className="text-sm text-blue-200 hover:text-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 -mx-2 transition-colors duration-200"
                 >
                   Quên mật khẩu?
                 </Link>
@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
               {loading ? 'Đang xử lý...' : (
                 <>
                   Đăng nhập
-                  <ArrowRight className="h-5 w-5 ml-2" />
+                  <ArrowRight className="h-5 w-5 ml-2 text-white" />
                 </>
               )}
             </button>

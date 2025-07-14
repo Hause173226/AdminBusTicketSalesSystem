@@ -50,8 +50,8 @@ const ManagerDriver = () => {
   const [createLoading, setCreateLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
-  const [newDriverErrors, setNewDriverErrors] = useState<{ email?: string; phone?: string }>({});
-  const [editDriverErrors, setEditDriverErrors] = useState<{ email?: string; phone?: string }>({});
+  const [newDriverErrors, setNewDriverErrors] = useState<{ email?: string; phone?: string; licenseNumber?: string }>({});
+  const [editDriverErrors, setEditDriverErrors] = useState<{ email?: string; phone?: string; licenseNumber?: string }>({});
 
   // Validate helpers
   const validateEmail = (email: string) => {
@@ -62,6 +62,11 @@ const ManagerDriver = () => {
   const validatePhone = (phone: string) => {
     if (!phone) return "";
     if (!/^\d{10}$/.test(phone)) return "Số điện thoại phải đủ 10 số";
+    return "";
+  };
+  const validateLicenseNumber = (licenseNumber: string) => {
+    if (!licenseNumber) return "";
+    if (!/^\d{12}$/.test(licenseNumber)) return "Số GPLX phải gồm đúng 12 chữ số";
     return "";
   };
 
@@ -106,6 +111,9 @@ const ManagerDriver = () => {
     if (field === "phone") {
       setEditDriverErrors(errors => ({ ...errors, phone: validatePhone(value) }));
     }
+    if (field === "licenseNumber") {
+      setEditDriverErrors(errors => ({ ...errors, licenseNumber: validateLicenseNumber(value) }));
+    }
   };
   const handleNewDriverField = (field: string, value: string) => {
     setNewDriver((d: any) => ({ ...d, [field]: value }));
@@ -115,6 +123,9 @@ const ManagerDriver = () => {
     if (field === "phone") {
       setNewDriverErrors(errors => ({ ...errors, phone: validatePhone(value) }));
     }
+    if (field === "licenseNumber") {
+      setNewDriverErrors(errors => ({ ...errors, licenseNumber: validateLicenseNumber(value) }));
+    }
   };
 
   const handleUpdateDriver = async () => {
@@ -122,9 +133,10 @@ const ManagerDriver = () => {
     // Validate
     const emailError = validateEmail(editDriver.email ?? "");
     const phoneError = validatePhone(editDriver.phone ?? "");
+    const licenseNumberError = validateLicenseNumber(editDriver.licenseNumber ?? "");
     
-    setEditDriverErrors({ email: emailError, phone: phoneError });
-    if (emailError || phoneError) return;
+    setEditDriverErrors({ email: emailError, phone: phoneError, licenseNumber: licenseNumberError });
+    if (emailError || phoneError || licenseNumberError) return;
     setEditLoading(true);
     try {
       const payload = {
@@ -172,8 +184,9 @@ const ManagerDriver = () => {
     // Validate required fields
     const emailError = validateEmail(newDriver.email);
     const phoneError = validatePhone(newDriver.phone);
-    setNewDriverErrors({ email: emailError, phone: phoneError });
-    if (emailError || phoneError) return;
+    const licenseNumberError = validateLicenseNumber(newDriver.licenseNumber);
+    setNewDriverErrors({ email: emailError, phone: phoneError, licenseNumber: licenseNumberError });
+    if (emailError || phoneError || licenseNumberError) return;
     if (!newDriver.fullName) {
       toast.error("Vui lòng nhập họ tên tài xế!");
       return;
@@ -359,7 +372,7 @@ const ManagerDriver = () => {
             ],
             [
               { label: "Email", value: editDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => handleEditDriverField("email", e.target.value), error: editDriverErrors.email },
-              { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => handleEditDriverField("licenseNumber", e.target.value) },
+              { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => handleEditDriverField("licenseNumber", e.target.value), error: editDriverErrors.licenseNumber },
             ],
             [
               { label: "Trạng thái", value: editDriver.status, type: "select", options: [
@@ -388,14 +401,7 @@ const ManagerDriver = () => {
             ],
             [
               { label: "Email", value: newDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => handleNewDriverField("email", e.target.value), error: newDriverErrors.email },
-              { label: "Số GPLX", value: newDriver.licenseNumber, type: "text", onChange: (e: any) => handleNewDriverField("licenseNumber", e.target.value) },
-            ],
-            [
-              { label: "Trạng thái", value: newDriver.status, type: "select", options: [
-                { label: "Hoạt động", value: "active" },
-                { label: "Tạm đình chỉ", value: "suspended" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-              ], onChange: (e: any) => handleNewDriverField("status", e.target.value) },
+              { label: "Số GPLX", value: newDriver.licenseNumber, type: "text", onChange: (e: any) => handleNewDriverField("licenseNumber", e.target.value), error: newDriverErrors.licenseNumber },
             ],
           ]}
         />
