@@ -249,6 +249,54 @@ const ManagerRoute = () => {
     return code;
   };
 
+  // Helper: lấy mã thành phố viết tắt (không dấu, in hoa, ghép lại)
+  function getCityShortCode(city: string) {
+    if (!city) return '';
+    // Loại bỏ dấu tiếng Việt
+    const from = "àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ";
+    const to   = "aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd";
+    let result = city.toLowerCase();
+    for (let i = 0; i < from.length; ++i) {
+      result = result.replace(new RegExp(from[i], "g"), to[i]);
+    }
+    // Lấy ký tự đầu các từ, in hoa
+    return result.split(' ').map(w => w[0]?.toUpperCase() || '').join('');
+  }
+
+  // Sinh mã tuyến theo format ROU-HCMHN, nếu trùng thì thêm -01, -02...
+  function generateRouteCodeV2(city1: string, city2: string, existingCodes: string[]) {
+    let base = `ROU-${getCityShortCode(city1)}${getCityShortCode(city2)}`;
+    let code = base;
+    let counter = 1;
+    while (existingCodes.includes(code)) {
+      code = `${base}-${counter.toString().padStart(2, '2')}`;
+      counter++;
+    }
+    return code;
+  }
+
+  // Khi chọn điểm đi/điểm đến, tự động sinh mã tuyến
+  function handleOriginChange(e: any) {
+    const originId = e.target.value;
+    const city1 = getCityByStationId(originId);
+    const city2 = getCityByStationId(newRoute.destinationStation);
+    const name = updateRouteName(originId, newRoute.destinationStation);
+    const code = (city1 && city2)
+      ? generateRouteCodeV2(city1, city2, routes.map(r => r.code))
+      : '';
+    setNewRoute((r: any) => ({ ...r, originStation: originId, name, code }));
+  }
+  function handleDestinationChange(e: any) {
+    const destId = e.target.value;
+    const city1 = getCityByStationId(newRoute.originStation);
+    const city2 = getCityByStationId(destId);
+    const name = updateRouteName(newRoute.originStation, destId);
+    const code = (city1 && city2)
+      ? generateRouteCodeV2(city1, city2, routes.map(r => r.code))
+      : '';
+    setNewRoute((r: any) => ({ ...r, destinationStation: destId, name, code }));
+  }
+
   const columns = [
     { key: "code", label: "Mã tuyến" },
     { key: "name", label: "Tên tuyến" },
@@ -397,19 +445,10 @@ const ManagerRoute = () => {
           onSubmit={handleCreateRoute}
           submitLabel={createLoading ? "Đang lưu..." : "Tạo mới"}
           rows={[
+           
             [
-              { label: "Mã tuyến", value: newRoute.code, type: "text", icon: <Hash size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, code: e.target.value })) },
-              { label: "Trạng thái", value: newRoute.status, type: "select", options: [ { label: "Hoạt động", value: "active" }, { label: "Ngừng hoạt động", value: "inactive" } ], onChange: (e: any) => setNewRoute((r: any) => ({ ...r, status: e.target.value })) },
-            ],
-            [
-              { label: "Điểm đi", value: newRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
-                const originId = e.target.value;
-                setNewRoute((r: any) => ({ ...r, originStation: originId }));
-              }},
-              { label: "Điểm đến", value: newRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
-                const destId = e.target.value;
-                setNewRoute((r: any) => ({ ...r, destinationStation: destId }));
-              }},
+              { label: "Điểm đi", value: newRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleOriginChange },
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleDestinationChange },
             ],
             [
               { label: "Khoảng cách (km)", value: newRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },
