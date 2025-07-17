@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
 import { getAllDrivers, deleteDriver, updateDriver, createDriver } from "../../services/driverService";
-import { getAllBusOperators } from "../../services/busoperatorServices";
 import { Driver } from "../type";
 import BasicModal from "../modal/BasicModal";
 import { UserCheck, Phone, Mail, Calendar as CalendarIcon, Users, Eye, Pencil, Trash2, CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
+import Pagination from "../common/Pagination";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-700 border border-green-300 font-bold",
@@ -38,41 +38,52 @@ const ManagerDriver = () => {
   const [editDriver, setEditDriver] = useState<Driver | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [busOperators, setBusOperators] = useState<any[]>([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
   const [newDriver, setNewDriver] = useState<any>({
     fullName: "",
     phone: "",
     email: "",
     licenseNumber: "",
-    status: "active",
-    operator: "",
+    status: "active"
   });
   const [searchValue, setSearchValue] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+  const [newDriverErrors, setNewDriverErrors] = useState<{ email?: string; phone?: string; licenseNumber?: string }>({});
+  const [editDriverErrors, setEditDriverErrors] = useState<{ email?: string; phone?: string; licenseNumber?: string }>({});
+
+  // Validate helpers
+  const validateEmail = (email: string) => {
+    if (!email) return "";
+    if (!/^\S+@gmail\.com$/.test(email)) return "Email phải có đuôi @gmail.com";
+    return "";
+  };
+  const validatePhone = (phone: string) => {
+    if (!phone) return "";
+    if (!/^\d{10}$/.test(phone)) return "Số điện thoại phải đủ 10 số";
+    return "";
+  };
+  const validateLicenseNumber = (licenseNumber: string) => {
+    if (!licenseNumber) return "";
+    if (!/^\d{12}$/.test(licenseNumber)) return "Số GPLX phải gồm đúng 12 chữ số";
+    return "";
+  };
 
   const fetchDrivers = async () => {
     setLoading(true);
     try {
       const data = await getAllDrivers();
+      // Sort by createdAt descending (newest first)
+      data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setDrivers(data);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchBusOperators = async () => {
-    try {
-      const data = await getAllBusOperators();
-      setBusOperators(Array.isArray(data) ? data : [data]);
-    } catch (err) {
-      setBusOperators([]);
-    }
-  };
-
   useEffect(() => {
     fetchDrivers();
-    fetchBusOperators();
   }, []);
 
   handleView = (driver: any) => {
@@ -92,19 +103,49 @@ const ManagerDriver = () => {
     setShowEditModal(false);
     setEditDriver(null);
   };
+  const handleEditDriverField = (field: string, value: string) => {
+    setEditDriver((d: any) => ({ ...d, [field]: value }));
+    if (field === "email") {
+      setEditDriverErrors(errors => ({ ...errors, email: validateEmail(value) }));
+    }
+    if (field === "phone") {
+      setEditDriverErrors(errors => ({ ...errors, phone: validatePhone(value) }));
+    }
+    if (field === "licenseNumber") {
+      setEditDriverErrors(errors => ({ ...errors, licenseNumber: validateLicenseNumber(value) }));
+    }
+  };
+  const handleNewDriverField = (field: string, value: string) => {
+    setNewDriver((d: any) => ({ ...d, [field]: value }));
+    if (field === "email") {
+      setNewDriverErrors(errors => ({ ...errors, email: validateEmail(value) }));
+    }
+    if (field === "phone") {
+      setNewDriverErrors(errors => ({ ...errors, phone: validatePhone(value) }));
+    }
+    if (field === "licenseNumber") {
+      setNewDriverErrors(errors => ({ ...errors, licenseNumber: validateLicenseNumber(value) }));
+    }
+  };
+
   const handleUpdateDriver = async () => {
     if (!editDriver || !editDriver._id) return;
+    // Validate
+    const emailError = validateEmail(editDriver.email ?? "");
+    const phoneError = validatePhone(editDriver.phone ?? "");
+    const licenseNumberError = validateLicenseNumber(editDriver.licenseNumber ?? "");
+    
+    setEditDriverErrors({ email: emailError, phone: phoneError, licenseNumber: licenseNumberError });
+    if (emailError || phoneError || licenseNumberError) return;
     setEditLoading(true);
     try {
       const payload = {
-        ...editDriver,
-        operator: typeof editDriver.operator === "object"
-          ? (editDriver.operator as any)._id
-          : editDriver.operator,
+        ...editDriver
       };
       await updateDriver(editDriver._id, payload);
       setShowEditModal(false);
       setEditDriver(null);
+      setEditDriverErrors({});
       await fetchDrivers();
       toast.success("Cập nhật tài xế thành công");
     } catch (err: any) {
@@ -132,19 +173,44 @@ const ManagerDriver = () => {
       phone: "",
       email: "",
       licenseNumber: "",
-      status: "active",
-      operator: "",
+      status: "active"
     });
+    setNewDriverErrors({});
   };
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
   };
   const handleCreateDriver = async () => {
+    // Validate required fields
+    const emailError = validateEmail(newDriver.email);
+    const phoneError = validatePhone(newDriver.phone);
+    const licenseNumberError = validateLicenseNumber(newDriver.licenseNumber);
+    setNewDriverErrors({ email: emailError, phone: phoneError, licenseNumber: licenseNumberError });
+    if (emailError || phoneError || licenseNumberError) return;
+    if (!newDriver.fullName) {
+      toast.error("Vui lòng nhập họ tên tài xế!");
+      return;
+    }
+    if (!newDriver.phone) {
+      toast.error("Vui lòng nhập số điện thoại!");
+      return;
+    }
+    if (!newDriver.email) {
+      toast.error("Vui lòng nhập email!");
+      return;
+    }
+    if (!newDriver.licenseNumber) {
+      toast.error("Vui lòng nhập số GPLX!");
+      return;
+    }
+    if (!newDriver.status) {
+      toast.error("Vui lòng chọn trạng thái!");
+      return;
+    }
     setCreateLoading(true);
     try {
       const payload = {
-        ...newDriver,
-        operator: typeof newDriver.operator === "object" ? newDriver.operator._id : newDriver.operator,
+        ...newDriver
       };
       await createDriver(payload);
       setShowCreateModal(false);
@@ -153,9 +219,9 @@ const ManagerDriver = () => {
         phone: "",
         email: "",
         licenseNumber: "",
-        status: "active",
-        operator: "",
+        status: "active"
       });
+      setNewDriverErrors({});
       await fetchDrivers();
       toast.success("Tạo tài xế thành công");
     } catch (err: any) {
@@ -169,6 +235,8 @@ const ManagerDriver = () => {
     (driver.fullName?.toLowerCase().includes(searchValue.toLowerCase()) ||
      driver.phone?.toLowerCase().includes(searchValue.toLowerCase()))
   );
+  const totalPages = Math.ceil(filteredDrivers.length / pageSize);
+  const paginatedDrivers = filteredDrivers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
     { key: "fullName", label: "Họ tên" },
@@ -248,7 +316,17 @@ const ManagerDriver = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={filteredDrivers} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedDrivers} rowKey="_id" />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
+        </>
       )}
       {showModal && selectedDriver && (
         <BasicModal
@@ -274,9 +352,6 @@ const ManagerDriver = () => {
               { label: "Email", value: selectedDriver.email || "", type: "text", icon: <Mail size={18} /> },
               { label: "Số GPLX", value: selectedDriver.licenseNumber || "", type: "text" },
             ],
-            [
-              { label: "Nhà xe", value: typeof selectedDriver.operator === 'object' && selectedDriver.operator !== null ? (selectedDriver.operator as any).name : ((busOperators as any[]).find((op: any) => op._id === selectedDriver.operator)?.name || selectedDriver.operator || ""), type: "text", colSpan: 2 },
-            ],
           ]}
         />
       )}
@@ -292,22 +367,19 @@ const ManagerDriver = () => {
           submitLabel={editLoading ? "Đang lưu..." : "Cập nhật"}
           rows={[
             [
-              { label: "Họ tên", value: editDriver.fullName, type: "text", icon: <Users size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, fullName: e.target.value })) },
-              { label: "Số điện thoại", value: editDriver.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, phone: e.target.value })) },
+              { label: "Họ tên", value: editDriver.fullName, type: "text", icon: <Users size={18} />, onChange: (e: any) => handleEditDriverField("fullName", e.target.value) },
+              { label: "Số điện thoại", value: editDriver.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => handleEditDriverField("phone", e.target.value), error: editDriverErrors.phone },
             ],
             [
-              { label: "Email", value: editDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => setEditDriver((d: any) => ({ ...d, email: e.target.value })) },
-              { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => setEditDriver((d: any) => ({ ...d, licenseNumber: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: editDriver.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setEditDriver((d: any) => ({ ...d, operator: e.target.value })), colSpan: 2 },
+              { label: "Email", value: editDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => handleEditDriverField("email", e.target.value), error: editDriverErrors.email },
+              { label: "Số GPLX", value: editDriver.licenseNumber, type: "text", onChange: (e: any) => handleEditDriverField("licenseNumber", e.target.value), error: editDriverErrors.licenseNumber },
             ],
             [
               { label: "Trạng thái", value: editDriver.status, type: "select", options: [
                 { label: "Hoạt động", value: "active" },
                 { label: "Tạm đình chỉ", value: "suspended" },
                 { label: "Ngừng hoạt động", value: "inactive" },
-              ], onChange: (e: any) => setEditDriver((d: any) => ({ ...d, status: e.target.value })) },
+              ], onChange: (e: any) => handleEditDriverField("status", e.target.value) },
             ],
           ]}
         />
@@ -324,22 +396,12 @@ const ManagerDriver = () => {
           submitLabel={createLoading ? "Đang lưu..." : "Tạo mới"}
           rows={[
             [
-              { label: "Họ tên", value: newDriver.fullName, type: "text", icon: <Users size={18} />, onChange: (e: any) => setNewDriver((d: any) => ({ ...d, fullName: e.target.value })) },
-              { label: "Số điện thoại", value: newDriver.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => setNewDriver((d: any) => ({ ...d, phone: e.target.value })) },
+              { label: "Họ tên", value: newDriver.fullName, type: "text", icon: <Users size={18} />, onChange: (e: any) => handleNewDriverField("fullName", e.target.value) },
+              { label: "Số điện thoại", value: newDriver.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => handleNewDriverField("phone", e.target.value), error: newDriverErrors.phone },
             ],
             [
-              { label: "Email", value: newDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => setNewDriver((d: any) => ({ ...d, email: e.target.value })) },
-              { label: "Số GPLX", value: newDriver.licenseNumber, type: "text", onChange: (e: any) => setNewDriver((d: any) => ({ ...d, licenseNumber: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: newDriver.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setNewDriver((d: any) => ({ ...d, operator: e.target.value })), colSpan: 2 },
-            ],
-            [
-              { label: "Trạng thái", value: newDriver.status, type: "select", options: [
-                { label: "Hoạt động", value: "active" },
-                { label: "Tạm đình chỉ", value: "suspended" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-              ], onChange: (e: any) => setNewDriver((d: any) => ({ ...d, status: e.target.value })) },
+              { label: "Email", value: newDriver.email, type: "text", icon: <Mail size={18} />, onChange: (e: any) => handleNewDriverField("email", e.target.value), error: newDriverErrors.email },
+              { label: "Số GPLX", value: newDriver.licenseNumber, type: "text", onChange: (e: any) => handleNewDriverField("licenseNumber", e.target.value), error: newDriverErrors.licenseNumber },
             ],
           ]}
         />

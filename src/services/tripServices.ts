@@ -12,10 +12,10 @@ export const getTripById = async (id: string): Promise<Trip> => {
 };
 
 export const searchTrips = async (params: {
-  fromStationId?: string;
-  toStationId?: string;
-  departureDate?: string;
-  routeId?: string;
+  from: string;
+  to: string;
+  date: string;
+  searchBy: "city" | "station";
 }): Promise<Trip[]> => {
   const response = await axiosInstance.get("/trips/search", { params });
   return response.data;
@@ -28,6 +28,21 @@ export const getTripsByRoute = async (routeId: string): Promise<Trip[]> => {
 
 export const createTrip = async (tripData: Partial<Trip>) => {
   const response = await axiosInstance.post("/trips", tripData);
+  return response.data;
+};
+
+export const createMultipleTrips = async (
+  tripData: Partial<Trip>,
+  startTime: string,
+  endTime: string,
+  intervalHours: number = 2
+) => {
+  const response = await axiosInstance.post("/trips/multiple", {
+    tripData,
+    startTime,
+    endTime,
+    intervalHours,
+  });
   return response.data;
 };
 

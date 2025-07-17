@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import ManagerRoute from "./components/manager/managerRoute";
@@ -9,11 +9,16 @@ import ManagerUser from "./components/manager/managerUser";
 import ManagerDriver from "./components/manager/managerDriver";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { LoadingProvider, useLoading } from "./contexts/LoadingContext";
 import PrivateRoute from "./components/PrivateRoute";
 import AdminProfile from "./components/AdminProfile";
 import ManagerBooking from "./components/manager/managerbooking";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Dashboard from "./components/manager/dashboard";
+import { UserProvider } from './contexts/UserContext';
+import ManagerStation from "./components/manager/managerStation";
+import LoadingOverlay from "./components/common/LoadingOverlay";
 
 const Logout = () => {
   const { logout } = useAuth();
@@ -27,8 +32,31 @@ const Logout = () => {
 
 const AppContent = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [activeMenuItem, setActiveMenuItem] = useState("trip");
+  const [activeMenuItem, setActiveMenuItem] = useState("dashboard");
+  const location = useLocation();
   const { user, isAdmin, loading } = useAuth();
+  const { isLoading } = useLoading();
+
+  // Map path to menu id
+  const pathToMenuId = (pathname: string) => {
+    if (pathname === "/" || pathname.startsWith("/dashboard")) return "dashboard";
+    if (pathname.startsWith("/trips")) return "trips";
+    if (pathname.startsWith("/routes")) return "routes";
+    if (pathname.startsWith("/bus")) return "vehicles";
+    if (pathname.startsWith("/drivers")) return "drivers";
+    if (pathname.startsWith("/users")) return "users";
+    if (pathname.startsWith("/bookings")) return "bookings";
+    if (pathname.startsWith("/payments")) return "payments";
+    if (pathname.startsWith("/feedback")) return "feedback";
+    if (pathname.startsWith("/settings")) return "settings";
+    if (pathname.startsWith("/profile")) return "profile";
+    if (pathname.startsWith("/stations")) return "stations";
+    return "dashboard";
+  };
+
+  React.useEffect(() => {
+    setActiveMenuItem(pathToMenuId(location.pathname));
+  }, [location.pathname]);
   
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -68,7 +96,9 @@ const AppContent = () => {
         <Header toggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto p-6">
           <Routes>
-            <Route path="/" element={
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/trips" element={
               <PrivateRoute>
                 <ManagerTrip />
               </PrivateRoute>
@@ -98,6 +128,11 @@ const AppContent = () => {
                 <ManagerBooking />
               </PrivateRoute>
             } />
+            <Route path="/stations" element={
+              <PrivateRoute>
+                <ManagerStation />
+              </PrivateRoute>
+            } />
             <Route path="/profile" element={
               <PrivateRoute>
                 <AdminProfile />
@@ -111,18 +146,23 @@ const AppContent = () => {
       {isSidebarOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden" onClick={toggleSidebar} />
       )}
+      <LoadingOverlay isLoading={isLoading} />
     </div>
   );
 };
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-      <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
-    </Router>
+    <UserProvider>
+      <Router>
+        <LoadingProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </LoadingProvider>
+        <ToastContainer position="bottom-right" autoClose={3000} hideProgressBar newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover />
+      </Router>
+    </UserProvider>
   );
 }
 

@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import BasicTable from "../tables/BasicTable";
 import { getAllBuses, deleteBus, updateBus, createBus } from "../../services/busServices";
-import { getAllBusOperators } from "../../services/busoperatorServices";
 import { Bus } from "../type";
 import BasicModal from "../modal/BasicModal";
-import { Bus as BusIcon, Users, Hash, Settings, CheckCircle, XCircle, Wrench, Eye, Pencil, Trash2 } from "lucide-react";
+import { Bus as BusIcon, Hash, Settings, CheckCircle, XCircle, Wrench, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
+import Pagination from "../common/Pagination";
 
 const statusColor: Record<string, string> = {
   active: "bg-green-100 text-green-700 border border-green-300 font-bold",
@@ -25,6 +25,14 @@ const statusLabel: Record<string, string> = {
   active: "Hoạt động",
   maintenance: "Bảo trì",
   inactive: "Ngừng hoạt động",
+};
+
+// Thêm hàm ánh xạ loại xe sang tiếng Việt
+const busTypeLabel: Record<string, string> = {
+  standard: "Thường",
+  sleeper: "Giường nằm",
+  limousine: "Limousine",
+  vip: "VIP",
 };
 
 let handleView: (bus: any) => void;
@@ -45,34 +53,26 @@ const ManagerBus = () => {
     licensePlate: "",
     busType: "standard",
     seatCount: "",
-    status: "active",
-    operator: "",
+    status: "active"
   });
-  const [busOperators, setBusOperators] = useState<any[]>([]);
   const [searchBusType, setSearchBusType] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
   const fetchBuses = async () => {
     setLoading(true);
     try {
       const data = await getAllBuses();
+      // Sort by createdAt descending (newest first)
+      data.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setBuses(data);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchBusOperators = async () => {
-    try {
-      const data = await getAllBusOperators();
-      setBusOperators(Array.isArray(data) ? data : [data]);
-    } catch (err) {
-      setBusOperators([]);
-    }
-  };
-
   useEffect(() => {
     fetchBuses();
-    fetchBusOperators();
   }, []);
 
   handleView = (bus: any) => {
@@ -100,6 +100,7 @@ const ManagerBus = () => {
       setShowEditModal(false);
       setEditBus(null);
       await fetchBuses();
+      toast.success("Cập nhật xe bus thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật xe bus");
     } finally {
@@ -112,6 +113,7 @@ const ManagerBus = () => {
       await deleteBus(bus._id);
       await fetchBuses();
       setDeleteConfirmId(null);
+      toast.success("Xoá xe bus thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá xe bus");
     }
@@ -120,12 +122,29 @@ const ManagerBus = () => {
   const handleOpenCreateModal = () => {
     setShowCreateModal(true);
     setCreateError("");
-    setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active", operator: "" });
+    setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active" });
   };
   const handleCloseCreateModal = () => {
     setShowCreateModal(false);
   };
   const handleCreateBus = async () => {
+    // Validate required fields
+    if (!newBus.licensePlate) {
+      toast.error("Vui lòng nhập biển số xe!");
+      return;
+    }
+    if (!newBus.busType) {
+      toast.error("Vui lòng chọn loại xe!");
+      return;
+    }
+    if (!newBus.seatCount || isNaN(Number(newBus.seatCount)) || Number(newBus.seatCount) <= 0) {
+      toast.error("Vui lòng nhập số ghế hợp lệ!");
+      return;
+    }
+    if (!newBus.status) {
+      toast.error("Vui lòng chọn trạng thái!");
+      return;
+    }
     setCreateLoading(true);
     setCreateError("");
     try {
@@ -133,12 +152,11 @@ const ManagerBus = () => {
         licensePlate: newBus.licensePlate,
         busType: newBus.busType,
         seatCount: Number(newBus.seatCount),
-        status: newBus.status,
-        operator: newBus.operator,
+        status: newBus.status
       };
       await createBus(payload);
       setShowCreateModal(false);
-      setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active", operator: "" });
+      setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active" });
       await fetchBuses();
       toast.success("Tạo xe bus thành công");
     } catch (err: any) {
@@ -152,10 +170,12 @@ const ManagerBus = () => {
   const filteredBuses = buses.filter(bus =>
     bus.busType?.toLowerCase().includes(searchBusType.toLowerCase())
   );
+  const totalPages = Math.ceil(filteredBuses.length / pageSize);
+  const paginatedBuses = filteredBuses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columns = [
     { key: "licensePlate", label: "Biển số" },
-    { key: "busType", label: "Loại xe" },
+    { key: "busType", label: "Loại xe", render: (value: string) => busTypeLabel[value] || value },
     { key: "seatCount", label: "Số ghế" },
     {
       key: "status",
@@ -210,6 +230,8 @@ const ManagerBus = () => {
     },
   ];
 
+
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
@@ -229,7 +251,17 @@ const ManagerBus = () => {
       {loading ? (
         <div>Đang tải...</div>
       ) : (
-        <BasicTable columns={columns} data={filteredBuses} rowKey="_id" />
+        <>
+          <BasicTable columns={columns} data={paginatedBuses} rowKey="_id" />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
+        </>
       )}
       {showModal && selectedBus && (
         <BasicModal
@@ -242,14 +274,11 @@ const ManagerBus = () => {
           rows={[
             [
               { label: "Biển số", value: selectedBus.licensePlate || "", type: "text", icon: <Hash size={18} /> },
-              { label: "Loại xe", value: selectedBus.busType || "", type: "text", icon: <Settings size={18} /> },
+              { label: "Loại xe", value: busTypeLabel[selectedBus.busType] || selectedBus.busType || "", type: "text", icon: <Settings size={18} /> },
             ],
             [
-              { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Users size={18} /> },
+              { label: "Số ghế", value: selectedBus.seatCount || "", type: "text", icon: <Hash size={18} /> },
               { label: "Trạng thái", value: statusLabel[selectedBus.status || "inactive"], type: "text" },
-            ],
-            [
-              { label: "Nhà xe", value: typeof selectedBus.operator === 'object' && selectedBus.operator !== null ? (selectedBus.operator as any).name : (busOperators.find((op: any) => op._id === selectedBus.operator)?.name || selectedBus.operator || ""), type: "text"  ,colSpan: 2 },
             ],
           ]}
         />
@@ -275,15 +304,12 @@ const ManagerBus = () => {
               ], icon: <Settings size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, busType: e.target.value })) },
             ],
             [
-              { label: "Số ghế", value: editBus.seatCount, type: "number", icon: <Users size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, seatCount: e.target.value })) },
+              { label: "Số ghế", value: editBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setEditBus((b: any) => ({ ...b, seatCount: e.target.value })) },
               { label: "Trạng thái", value: editBus.status, type: "select", options: [
                 { label: "Hoạt động", value: "active" },
                 { label: "Bảo trì", value: "maintenance" },
                 { label: "Ngừng hoạt động", value: "inactive" },
               ], onChange: (e: any) => setEditBus((b: any) => ({ ...b, status: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: editBus.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setEditBus((b: any) => ({ ...b, operator: e.target.value })),  colSpan: 2 },
             ],
           ]}
         />
@@ -309,15 +335,7 @@ const ManagerBus = () => {
               ], icon: <Settings size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, busType: e.target.value })) },
             ],
             [
-              { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Users size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
-              { label: "Trạng thái", value: newBus.status, type: "select", options: [
-                { label: "Hoạt động", value: "active" },
-                { label: "Bảo trì", value: "maintenance" },
-                { label: "Ngừng hoạt động", value: "inactive" },
-              ], onChange: (e: any) => setNewBus((b: any) => ({ ...b, status: e.target.value })) },
-            ],
-            [
-              { label: "Nhà xe", value: newBus.operator, type: "select", options: busOperators.map((op: any) => ({ label: op.name, value: op._id })), onChange: (e: any) => setNewBus((b: any) => ({ ...b, operator: e.target.value })) },
+              { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
             ],
           ]}
         />

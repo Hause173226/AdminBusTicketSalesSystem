@@ -29,3 +29,4 @@ export const getStationNamesAndCities = async () => {
   const response = await axiosInstance.get("/station/city-names");
   return response.data;
 };
+

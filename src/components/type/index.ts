@@ -2,8 +2,8 @@ export interface Route {
     _id: string;
     name: string;
     code: string;
-    originStation: Station[];
-    destinationStation: Station[];
+    originStation: Station;
+    destinationStation: Station;
     distanceKm: number;
     estimatedDuration: number;
     status: string;
@@ -112,6 +112,10 @@ export interface Route {
     basePrice: number;
     status: string;
     availableSeats: number;
+    notes?: string;
+    driver: string | Driver;
+    createdAt?: string;
+    updatedAt?: string;
   }
   
   export interface Driver {
@@ -121,18 +125,18 @@ export interface Route {
     email?: string;
     licenseNumber: string;
     status?: "active" | "inactive" | "suspended";
-    operator: string;
     createdAt?: string;
     updatedAt?: string;
+    avatar?: string;
   }
   
   export interface Bus {
     _id?: string;
-    operator: string; // BusOperator ID
     licensePlate: string;
     busType: "standard" | "sleeper" | "limousine" | "vip";
     seatCount: number;
     status?: "active" | "maintenance" | "inactive";
     createdAt?: string;
     updatedAt?: string;
+    image?: string;
   }

@@ -1,14 +1,18 @@
 import React from "react";
+import SearchableSelect from "../common/SearchableSelect";
 
 interface Field {
   label: string;
   value: any;
   type?: string; // text, select, date, etc.
-  options?: { label: string; value: any }[]; // cho select
+  options?: { label: string; value: any }[]; 
   placeholder?: string;
   icon?: React.ReactNode;
-  colSpan?: number; // 2 nếu muốn chiếm full row
+  colSpan?: number; 
   onChange?: (e: React.ChangeEvent<any>) => void;
+  readOnly?: boolean;
+  error?: string; 
+  min?: string; 
 }
 
 interface BasicModalProps {
@@ -22,6 +26,7 @@ interface BasicModalProps {
   onSubmit?: () => void;
   submitLabel?: string;
   updatedAt?: string;
+  children?: React.ReactNode;
 }
 
 const BasicModal: React.FC<BasicModalProps> = ({
@@ -35,6 +40,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
   onSubmit,
   submitLabel = "Lưu",
   updatedAt,
+  children,
 }) => {
   if (!open) return null;
   return (
@@ -72,7 +78,15 @@ const BasicModal: React.FC<BasicModalProps> = ({
                   >
                     <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
                     <div className="relative">
-                      {field.type === "select" && field.options ? (
+                      {field.type === "searchable-select" && field.options ? (
+                        <SearchableSelect
+                          options={field.options}
+                          value={field.value}
+                          onChange={field.onChange as any}
+                          placeholder={field.placeholder || `Chọn ${field.label.toLowerCase()}`}
+                          disabled={readonly}
+                        />
+                      ) : field.type === "select" && field.options ? (
                         <select
                           className="w-full border rounded px-3 py-2 bg-gray-100"
                           value={field.value}
@@ -97,6 +111,8 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             placeholder={field.placeholder || field.label}
                             title={field.label}
                             onChange={field.onChange}
+                            readOnly={field.readOnly}
+                            min={field.min} 
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -114,6 +130,7 @@ const BasicModal: React.FC<BasicModalProps> = ({
                             placeholder={field.placeholder || field.label}
                             title={field.label}
                             onChange={field.onChange}
+                            readOnly={field.readOnly}
                           />
                           {field.icon && (
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
@@ -123,11 +140,16 @@ const BasicModal: React.FC<BasicModalProps> = ({
                         </>
                       )}
                     </div>
+                    {field.error && (
+                      <div className="text-xs text-red-600 mt-1">{field.error}</div>
+                    )}
                   </div>
                 ))}
               </div>
             ))}
           </div>
+          {/* Custom children content */}
+          {children && <div className="mb-6">{children}</div>}
           <div className="flex items-center justify-between gap-2">
             {updatedAt ? (
               <div className="text-xs text-gray-500">

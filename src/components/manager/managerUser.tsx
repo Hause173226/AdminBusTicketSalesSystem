@@ -5,6 +5,8 @@ import BasicModal from "../modal/BasicModal";
 import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye, Pencil, Trash2 } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
+import SearchInput from "./SearchInput";
+import Pagination from "../common/Pagination";
 
 const columns = [
   { key: "fullName", label: "Họ tên" },
@@ -55,6 +57,10 @@ const ManagerUser = () => {
   const [editUser, setEditUser] = useState<any | null>(null);
   const [editFields, setEditFields] = useState<any>({});
   const [deletePopover, setDeletePopover] = useState<{ open: boolean; user: any | null }>({ open: false, user: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+  const [searchValue, setSearchValue] = useState("");
+  const [editUserErrors, setEditUserErrors] = useState<{ email?: string; phone?: string }>({});
 
   handleView = (user: any) => {
     setSelectedUser(user);
@@ -90,11 +96,65 @@ const ManagerUser = () => {
     setShowEditModal(false);
     setEditUser(null);
   };
+  // Validate helpers
+  const validateEmail = (email: string) => {
+    if (!email) return "";
+    if (!/^\S+@gmail\.com$/.test(email)) return "Email phải có đuôi @gmail.com";
+    return "";
+  };
+  const validatePhone = (phone: string) => {
+    if (!phone) return "";
+    if (!/^\d{10}$/.test(phone)) return "Số điện thoại phải đủ 10 số";
+    return "";
+  };
   const handleEditFieldChange = (field: string, value: any) => {
     setEditFields((prev: any) => ({ ...prev, [field]: value }));
+    if (field === "email") {
+      setEditUserErrors(errors => ({ ...errors, email: validateEmail(value) }));
+    }
+    if (field === "phone") {
+      setEditUserErrors(errors => ({ ...errors, phone: validatePhone(value) }));
+    }
   };
   const handleEditSubmit = async () => {
     if (!editUser) return;
+    // Validate required fields
+    const emailError = validateEmail(editFields.email);
+    const phoneError = validatePhone(editFields.phone);
+    setEditUserErrors({ email: emailError, phone: phoneError });
+    if (emailError || phoneError) return;
+    if (!editFields.fullName) {
+      toast.error("Vui lòng nhập họ tên!");
+      return;
+    }
+    if (!editFields.phone) {
+      toast.error("Vui lòng nhập số điện thoại!");
+      return;
+    }
+    if (!editFields.email) {
+      toast.error("Vui lòng nhập email!");
+      return;
+    }
+    if (!editFields.citizenId) {
+      toast.error("Vui lòng nhập CCCD!");
+      return;
+    }
+    if (!editFields.dateOfBirth) {
+      toast.error("Vui lòng nhập ngày sinh!");
+      return;
+    }
+    if (!editFields.gender) {
+      toast.error("Vui lòng chọn giới tính!");
+      return;
+    }
+    if (!editFields.address) {
+      toast.error("Vui lòng nhập địa chỉ!");
+      return;
+    }
+    if (!editFields.role) {
+      toast.error("Vui lòng chọn vai trò!");
+      return;
+    }
     try {
       setLoading(true);
       const { _id, password, ...payload } = editFields;
@@ -102,6 +162,8 @@ const ManagerUser = () => {
       setUsers(users => users.map(u => (u._id === editUser._id ? { ...u, ...payload } : u)));
       setShowEditModal(false);
       setEditUser(null);
+      setEditUserErrors({});
+      toast.success("Cập nhật người dùng thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật người dùng");
     } finally {
@@ -115,6 +177,7 @@ const ManagerUser = () => {
       await userServices.deleteUser(deletePopover.user._id);
       setUsers(users => users.filter(u => u._id !== deletePopover.user._id));
       setDeletePopover({ open: false, user: null });
+      toast.success("Xoá người dùng thành công");
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá người dùng");
     } finally {
@@ -130,7 +193,10 @@ const ManagerUser = () => {
       try {
         const res = await userServices.getAllUsers();
         if (res.status === 200) {
-          setUsers(Array.isArray(res.data) ? res.data : [res.data]);
+          const arr = Array.isArray(res.data) ? res.data : [res.data];
+          // Sort by createdAt descending (newest first)
+          arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setUsers(arr);
         } else {
           setError("Không thể lấy dữ liệu người dùng");
         }
@@ -142,6 +208,18 @@ const ManagerUser = () => {
     };
     fetchUsers();
   }, []);
+
+  // Lọc users theo searchValue
+  const filteredUsers = users.filter(u => {
+    const v = searchValue.toLowerCase();
+    return (
+      u.fullName?.toLowerCase().includes(v) ||
+      u.phone?.toLowerCase().includes(v) ||
+      u.email?.toLowerCase().includes(v)
+    );
+  });
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const columnsWithActions = [
     ...columns.slice(0, 3),
@@ -194,13 +272,31 @@ const ManagerUser = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách người dùng</h3>
+        <div className="ml-auto">
+          <SearchInput
+            value={searchValue}
+            onChange={e => { setSearchValue(e.target.value); setCurrentPage(1); }}
+            placeholder="Tìm kiếm tên, số điện thoại, email..."
+            debounceMs={1000}
+          />
+        </div>
       </div>
       {loading ? (
         <div>Đang tải...</div>
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : (
-        <BasicTable columns={columnsWithActions} data={users} rowKey="_id" />
+        <>
+          <BasicTable columns={columnsWithActions} data={paginatedUsers} rowKey="_id" />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={page => setCurrentPage(page)}
+            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            pageSizeOptions={[6, 15, 30, 50, 100]}
+          />
+        </>
       )}
       {/* Modal xem chi tiết người dùng */}
       {showModal && selectedUser && (
@@ -211,7 +307,11 @@ const ManagerUser = () => {
           subtitle={
             <div className="flex items-center gap-2">
               <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold uppercase">
-                {selectedUser.role || "USER"}
+                {selectedUser.role === "admin"
+                  ? "QUẢN TRỊ VIÊN"
+                  : selectedUser.role === "user"
+                  ? "NGƯỜI DÙNG"
+                  : (selectedUser.role || "NGƯỜI DÙNG").toUpperCase()}
               </span>
               <span className="text-gray-500 text-xs">Thông tin chi tiết người dùng</span>
             </div>
@@ -229,7 +329,7 @@ const ManagerUser = () => {
             ],
             [
               { label: "Ngày sinh", value: selectedUser.dateOfBirth ? new Date(selectedUser.dateOfBirth).toLocaleDateString("vi-VN") : "", type: "text", icon: <CalendarIcon size={18} /> },
-              { label: "Giới tính", value: selectedUser.gender || "", type: "text" },
+              { label: "Giới tính", value: selectedUser.gender === "male" ? "Nam" : selectedUser.gender === "female" ? "Nữ" : selectedUser.gender === "other" ? "Khác" : (selectedUser.gender || ""), type: "text" },
             ],
             [
               { label: "Địa chỉ", value: selectedUser.address || "", type: "text", colSpan: 2, icon: <MapPin size={18} /> },
@@ -250,10 +350,10 @@ const ManagerUser = () => {
           rows={[
             [
               { label: "Họ tên", value: editFields.fullName, type: "text", icon: <UserIcon size={18} />, onChange: (e: any) => handleEditFieldChange("fullName", e.target.value) },
-              { label: "Số điện thoại", value: editFields.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => handleEditFieldChange("phone", e.target.value) },
+              { label: "Số điện thoại", value: editFields.phone, type: "text", icon: <Phone size={18} />, onChange: (e: any) => handleEditFieldChange("phone", e.target.value), error: editUserErrors.phone },
             ],
             [
-              { label: "Email", value: editFields.email, type: "email", icon: <Mail size={18} />, onChange: (e: any) => handleEditFieldChange("email", e.target.value) },
+              { label: "Email", value: editFields.email, type: "email", icon: <Mail size={18} />, onChange: (e: any) => handleEditFieldChange("email", e.target.value), error: editUserErrors.email },
               { label: "CCCD", value: editFields.citizenId, type: "text", icon: <UserIcon size={18} />, onChange: (e: any) => handleEditFieldChange("citizenId", e.target.value) },
             ],
             [
@@ -264,7 +364,7 @@ const ManagerUser = () => {
               { label: "Địa chỉ", value: editFields.address, type: "text", colSpan: 2, icon: <MapPin size={18} />, onChange: (e: any) => handleEditFieldChange("address", e.target.value) },
             ],
             [
-              { label: "Vai trò", value: editFields.role, type: "select", options: [ { label: "User", value: "user" }, { label: "Admin", value: "admin" } ], onChange: (e: any) => handleEditFieldChange("role", e.target.value) },
+              { label: "Vai trò", value: editFields.role, type: "select", options: [ { label: "Người dùng", value: "user" }, { label: "Quản trị viên", value: "admin" } ], onChange: (e: any) => handleEditFieldChange("role", e.target.value) },
             ],
           ]}
         />
