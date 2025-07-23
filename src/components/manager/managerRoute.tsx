@@ -355,7 +355,10 @@ const ManagerRoute = () => {
                   <div className="font-bold text-red-600 text-base">xoá tuyến đường này?</div>
                 </>
               }
-              onConfirm={() => handleDelete(row)}
+              onConfirm={() => {
+                setDeleteConfirmId(null); // Đóng modal trước
+                setTimeout(() => handleDelete(row), 100); // Thực hiện xóa sau
+              }}
               onCancel={() => setDeleteConfirmId(null)}
             />
           </div>

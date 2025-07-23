@@ -132,22 +132,22 @@ const ManagerBooking: React.FC = () => {
                   setBookingToCancel(null);
                 }}
                 onConfirm={() => {
-                  bookingService.cancelBooking(row._id)
-                    .then(res => {
-                      toast.success("Huỷ booking thành công!");
-                      setBookings(prev =>
-                        prev.map(b =>
-                          b._id === row._id ? { ...b, bookingStatus: "cancelled" } : b
-                        )
-                      );
-                    })
-                    .catch(err => {
-                      toast.error("Huỷ booking thất bại: " + (err?.response?.data?.message || err.message));
-                    })
-                    .finally(() => {
-                      setConfirmOpen(false);
-                      setBookingToCancel(null);
-                    });
+                  setConfirmOpen(false); // Đóng modal trước
+                  setBookingToCancel(null);
+                  setTimeout(() => {
+                    bookingService.cancelBooking(row._id)
+                      .then(res => {
+                        toast.success("Huỷ booking thành công!");
+                        setBookings(prev =>
+                          prev.map(b =>
+                            b._id === row._id ? { ...b, bookingStatus: "cancelled" } : b
+                          )
+                        );
+                      })
+                      .catch(err => {
+                        toast.error("Huỷ booking thất bại: " + (err?.response?.data?.message || err.message));
+                      });
+                  }, 100);
                 }}
               />
             )}
