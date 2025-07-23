@@ -50,6 +50,9 @@ export const userServices = {
   deleteUser: (id: string) => {
     return axiosInstance.delete(`/users/${id}`);
   },
+  changeUserStatus: (id: string, isActive: boolean) => {
+    return axiosInstance.put(`/users/${id}/change-status`, { isActive });
+  },
   // LẤY PROFILE VÀ UPDATE PROFILE
   getProfile: () => {
     return axiosInstance.get("/users/profile");

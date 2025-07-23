@@ -162,7 +162,8 @@ const ManagerDriver = () => {
       setDeleteConfirmId(null);
       toast.success("Xoá tài xế thành công");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá tài xế");
+      // Log ra đúng lỗi trả về từ backend
+      toast.error(err.response?.data?.error || err.response?.data?.message || err.message || "Lỗi khi xoá tài xế");
     }
   };
 
