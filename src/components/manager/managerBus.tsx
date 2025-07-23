@@ -138,8 +138,9 @@ const ManagerBus = () => {
       toast.error("Vui lòng chọn loại xe!");
       return;
     }
-    if (!newBus.seatCount || isNaN(Number(newBus.seatCount)) || Number(newBus.seatCount) <= 0) {
-      toast.error("Vui lòng nhập số ghế hợp lệ!");
+    // Số ghế: chỉ validate nếu người dùng nhập
+    if (newBus.seatCount !== "" && (isNaN(Number(newBus.seatCount)) || Number(newBus.seatCount) <= 0)) {
+      toast.error("Vui lòng nhập số ghế hợp lệ hoặc để trống để tự động!");
       return;
     }
     if (!newBus.status) {
@@ -152,10 +153,11 @@ const ManagerBus = () => {
       const payload = {
         licensePlate: newBus.licensePlate,
         busType: newBus.busType,
-        seatCount: Number(newBus.seatCount),
+        // Nếu seatCount rỗng, không gửi lên (backend sẽ tự động)
+        ...(newBus.seatCount !== "" && !isNaN(Number(newBus.seatCount)) ? { seatCount: Number(newBus.seatCount) } : {}),
         status: newBus.status
       };
-      await createBus(payload);
+      await createBus(payload as any);
       setShowCreateModal(false);
       setNewBus({ licensePlate: "", busType: "standard", seatCount: "", status: "active" });
       await fetchBuses();
@@ -208,9 +210,10 @@ const ManagerBus = () => {
           </button>
           <div className="relative">
             <button
-              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-              title="Xoá"
-              onClick={() => setDeleteConfirmId(row._id!)}
+              className={`p-2 text-red-500 bg-transparent rounded ${row.status === 'inactive' ? 'hover:bg-red-50' : 'opacity-50 cursor-not-allowed'} text-xs flex items-center justify-center shadow-none border-none focus:outline-none`}
+              title={row.status === 'inactive' ? "Xoá" : "Chỉ có thể xoá xe bus khi trạng thái là 'Ngừng hoạt động'"}
+              onClick={() => row.status === 'inactive' ? setDeleteConfirmId(row._id!) : null}
+              disabled={row.status !== 'inactive'}
             >
               <Trash2 size={18} />
             </button>
@@ -222,7 +225,10 @@ const ManagerBus = () => {
                   <div className="font-bold text-red-600 text-base">xoá xe bus này?</div>
                 </>
               }
-              onConfirm={() => handleDelete(row)}
+              onConfirm={() => {
+                setDeleteConfirmId(null); // Đóng modal trước
+                setTimeout(() => handleDelete(row), 100); // Thực hiện xóa sau
+              }}
               onCancel={() => setDeleteConfirmId(null)}
             />
           </div>
@@ -335,9 +341,7 @@ const ManagerBus = () => {
                 { label: "VIP", value: "vip" },
               ], icon: <Settings size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, busType: e.target.value })) },
             ],
-            [
-              { label: "Số ghế", value: newBus.seatCount, type: "number", icon: <Hash size={18} />, onChange: (e: any) => setNewBus((b: any) => ({ ...b, seatCount: e.target.value })) },
-            ],
+            // Bỏ trường số ghế ở đây
           ]}
         />
       )}
