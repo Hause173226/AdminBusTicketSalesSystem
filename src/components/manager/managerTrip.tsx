@@ -1,7 +1,7 @@
 import  { useEffect, useState } from "react";
 import { Bus, BarChart3, Calendar, MapPin, Eye, Pencil, Trash2, CheckCircle, Clock, XCircle, Loader, DollarSign, Users, Info } from "lucide-react";
 import BasicTable from "../tables/BasicTable";
-import { getAllTrips, createTrip, createMultipleTrips, updateTrip, deleteTrip } from "../../services/tripServices";
+import { getAllTrips, createTrip, updateTrip, deleteTrip } from "../../services/tripServices";
 import { getAllRoutes } from "../../services/routeServices";
 import { getAllBuses } from "../../services/busServices";
 import { getAllDrivers } from "../../services/driverService";
@@ -175,44 +175,48 @@ const ManagerTrip = () => {
     {
       key: "action",
       label: "Action",
-      render: (_: any, row: any) => (
-        <div className="flex items-center gap-2 relative">
-          <button
-            className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-            title="Xem chi tiết"
-            onClick={() => handleView(row)}
-          >
-            <Eye size={18} />
-          </button>
-          <button
-            className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-            title="Chỉnh sửa"
-            onClick={() => handleEdit(row)}
-          >
-            <Pencil size={18} />
-          </button>
-          <div className="relative">
+      render: (_: any, row: any) => {
+        const canDelete = row.status === 'cancelled' || row.status === 'completed';
+        return (
+          <div className="flex items-center gap-2 relative">
             <button
-              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-              title="Xoá"
-              onClick={() => setDeleteConfirmId(row._id)}
+              className="p-2 text-blue-500 bg-transparent rounded hover:bg-blue-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Xem chi tiết"
+              onClick={() => handleView(row)}
             >
-              <Trash2 size={18} />
+              <Eye size={18} />
             </button>
-            <ConfirmPopover
-              open={deleteConfirmId === row._id}
-              message={
-                <>
-                  <div>Bạn có chắc chắn muốn</div>
-                  <div className="font-bold text-red-600 text-base">xoá chuyến xe này?</div>
-                </>
-              }
-              onConfirm={() => handleDelete(row)}
-              onCancel={() => setDeleteConfirmId(null)}
-            />
+            <button
+              className="p-2 text-yellow-500 bg-transparent rounded hover:bg-yellow-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
+              title="Chỉnh sửa"
+              onClick={() => handleEdit(row)}
+            >
+              <Pencil size={18} />
+            </button>
+            <div className="relative">
+              <button
+                className={`p-2 text-red-500 bg-transparent rounded ${canDelete ? 'hover:bg-red-50' : 'opacity-50 cursor-not-allowed'} text-xs flex items-center justify-center shadow-none border-none focus:outline-none`}
+                title={canDelete ? "Xoá" : "Chỉ có thể xoá chuyến đã huỷ hoặc hoàn thành"}
+                onClick={() => canDelete ? setDeleteConfirmId(row._id) : null}
+                disabled={!canDelete}
+              >
+                <Trash2 size={18} />
+              </button>
+              <ConfirmPopover
+                open={deleteConfirmId === row._id}
+                message={
+                  <>
+                    <div>Bạn có chắc chắn muốn</div>
+                    <div className="font-bold text-red-600 text-base">xoá chuyến xe này?</div>
+                  </>
+                }
+                onConfirm={() => handleDelete(row)}
+                onCancel={() => setDeleteConfirmId(null)}
+              />
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
   ];
 
@@ -249,9 +253,9 @@ const ManagerTrip = () => {
           getAllBuses(),
           getAllDrivers(),
         ]);
-        setRoutes(Array.isArray(routesData) ? routesData : [routesData]);
-        setBuses(Array.isArray(busesData) ? busesData : [busesData]);
-        setDrivers(Array.isArray(driversData) ? driversData : [driversData]);
+        setRoutes(Array.isArray(routesData) ? routesData.filter(r => r.status === "active") : []);
+        setBuses(Array.isArray(busesData) ? busesData.filter(b => b.status === "active") : []);
+        setDrivers(Array.isArray(driversData) ? driversData.filter(d => d.status === "active") : []);
       } catch (err) {
         setRoutes([]);
         setBuses([]);
@@ -274,8 +278,16 @@ const ManagerTrip = () => {
   useEffect(() => {
     const updateBusyResources = () => {
       const busyTrips = routeData.filter(trip => ["scheduled", "in_progress"].includes(trip.status));
-      setBusyBusIds(busyTrips.map(trip => typeof trip.bus === 'object' ? trip.bus._id : trip.bus));
-      setBusyDriverIds(busyTrips.map(trip => typeof trip.driver === 'object' ? trip.driver._id : trip.driver));
+      setBusyBusIds(
+        busyTrips
+          .map(trip => (trip.bus && typeof trip.bus === 'object' ? trip.bus._id : trip.bus))
+          .filter(Boolean)
+      );
+      setBusyDriverIds(
+        busyTrips
+          .map(trip => (trip.driver && typeof trip.driver === 'object' ? trip.driver._id : trip.driver))
+          .filter(Boolean)
+      );
     };
     updateBusyResources();
   }, [routeData]);
@@ -286,8 +298,24 @@ const ManagerTrip = () => {
     if (/^\d{1,2}$/.test(time)) return `${time.padStart(2, '0')}:00`;
     return time;
   };
-
   const handleCreateTrip = async () => {
+    // Kiểm tra giờ xuất phát phải cách hiện tại ít nhất 1 tiếng
+    const now = new Date();
+    // Chuyển đổi giờ đi về dạng HH:mm 24h nếu cần
+    let depTime = newTrip.departureTime;
+    if (/SA|CH/i.test(depTime)) {
+      // Nếu là định dạng 12h có SA/CH, chuyển về 24h
+      const [time, period] = depTime.split(" ");
+      let [h, m] = time.split(":").map(Number);
+      if (/CH/i.test(period) && h < 12) h += 12;
+      if (/SA/i.test(period) && h === 12) h = 0;
+      depTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    }
+    const departureDateTime = new Date(`${newTrip.departureDate}T${depTime}`);
+    if (departureDateTime.getTime() - now.getTime() < 60 * 60 * 1000) {
+      toast.error("Giờ xuất phát phải cách thời điểm hiện tại ít nhất 1 tiếng!");
+      return;
+    }
     // Validate required fields
     if (!newTrip.route) {
       toast.error("Vui lòng chọn tuyến xe!");
@@ -337,7 +365,8 @@ const ManagerTrip = () => {
         status: newTrip.status || 'scheduled',
         availableSeats: Number(newTrip.availableSeats), // Thêm availableSeats vào payload
       };
-      console.log("Payload gửi lên:", payload);
+      // Không gửi arrivalTime
+      delete payload.arrivalTime;
       // Tạo trip
       const createdTrip = await createTrip(payload);
       // Khởi tạo ghế cho trip vừa tạo
@@ -359,7 +388,7 @@ const ManagerTrip = () => {
       toast.success("Tạo chuyến xe và khởi tạo ghế thành công");
     } catch (err: any) {
       setCreateError("Lỗi khi tạo chuyến xe mới");
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi tạo chuyến xe mới");
+      toast.error(err.message || "Lỗi khi tạo chuyến xe mới");
     } finally {
       setCreateLoading(false);
     }
@@ -387,6 +416,8 @@ const ManagerTrip = () => {
         departureTime: formatTime(editTrip.departureTime),
         status: editTrip.status || 'scheduled',
       };
+      // Không gửi arrivalTime
+      delete payload.arrivalTime;
       await updateTrip(editTrip._id, payload);
       setShowEditModal(false);
       setEditTrip(null);
@@ -394,7 +425,7 @@ const ManagerTrip = () => {
       toast.success("Cập nhật chuyến xe thành công");
     } catch (err: any) {
       setEditError("Lỗi khi cập nhật chuyến xe");
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi cập nhật chuyến xe");
+      toast.error(err.message || "Lỗi khi cập nhật chuyến xe");
     } finally {
       setEditLoading(false);
     }
@@ -407,7 +438,7 @@ const ManagerTrip = () => {
       setDeleteConfirmId(null);
       toast.success("Xoá chuyến xe thành công");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá chuyến xe");
+      toast.error(err.message || "Lỗi khi xoá chuyến xe");
     }
   };
 
@@ -577,21 +608,44 @@ const ManagerTrip = () => {
               { label: "Tài xế", value: selectedTrip.driver?.fullName || "", type: "text", icon: <Users size={16} /> },
             ],
             [
-              { label: "Ngày xuất phát", value: selectedTrip.departureDateDisplay || "", type: "text", icon: <CalendarIcon size={16} /> },
+              // Giờ đi: luôn lấy departureTime + departureDate
+              { 
+                label: "Giờ đi", 
+                value: selectedTrip.departureTime && selectedTrip.departureDate ? `${selectedTrip.departureTime} (${new Date(selectedTrip.departureDate).toLocaleDateString()})` : (selectedTrip.departureTime || ""), 
+                type: "text", 
+                icon: <Clock size={16} /> 
+              },
+              // Giờ đến: nếu có arrivalDate thì dùng arrivalTime + arrivalDate, nếu không thì tính arrivalDate dựa trên departureDate + estimatedDuration (nếu có), nếu không thì chỉ hiển thị arrivalTime
+              (() => {
+                let arrivalDateStr = "";
+                if (selectedTrip.arrivalTime) {
+                  // Nếu có arrivalDate riêng, dùng arrivalDate
+                  if (selectedTrip.arrivalDate) {
+                    arrivalDateStr = `${selectedTrip.arrivalTime} (${new Date(selectedTrip.arrivalDate).toLocaleDateString()})`;
+                  } else if (selectedTrip.departureDate && selectedTrip.route && selectedTrip.route.estimatedDuration) {
+                    // Nếu có departureDate và estimatedDuration, tính arrivalDate
+                    const depDate = new Date(selectedTrip.departureDate);
+                    const [depHour, depMin] = selectedTrip.departureTime ? selectedTrip.departureTime.split(":").map(Number) : [0,0];
+                    depDate.setHours(depHour, depMin || 0, 0, 0);
+                    const arr = new Date(depDate.getTime() + selectedTrip.route.estimatedDuration * 60 * 1000); // estimatedDuration phút
+                    arrivalDateStr = `${selectedTrip.arrivalTime} (${arr.toLocaleDateString()})`;
+                  } else if (selectedTrip.departureDate && selectedTrip.arrivalTime) {
+                    // fallback: nếu không có estimatedDuration, nhưng có departureDate
+                    arrivalDateStr = `${selectedTrip.arrivalTime} (${new Date(selectedTrip.departureDate).toLocaleDateString()})`;
+                  } else {
+                    arrivalDateStr = selectedTrip.arrivalTime;
+                  }
+                }
+                return { label: "Giờ đến", value: arrivalDateStr, type: "text", icon: <Clock size={16} /> };
+              })(),
+            ],
+            [
               { label: "Giá vé", value: selectedTrip.basePriceDisplay || "", type: "text", icon: <DollarSign size={16} /> },
-            ],
-            [
-              { label: "Giờ đi", value: selectedTrip.departureTime || "", type: "text", icon: <Clock size={16} /> },
-              { label: "Giờ đến", value: selectedTrip.arrivalTime || "", type: "text", icon: <Clock size={16} /> },
-            ],
-            [
-              
               { label: "Ghế còn trống", value: availableSeatCount, type: "text", icon: <Users size={16} /> },
-              { label: "Trạng thái", value: statusLabel[selectedTrip.status] || selectedTrip.status, type: "text" },
             ],
-          
             [
-              { label: "Ghi chú", value: selectedTrip.notes || "", type: "text", icon: <Info size={16} />, colSpan: 2 },
+              { label: "Trạng thái", value: statusLabel[selectedTrip.status] || selectedTrip.status, type: "text" },
+              { label: "Ghi chú", value: selectedTrip.notes || "", type: "text", icon: <Info size={16} />, colSpan: 1 },
             ],
           ]}
           updatedAt={selectedTrip.updatedAt}
@@ -615,7 +669,6 @@ const ManagerTrip = () => {
                 value: r._id
               })), onChange: (e: any) => handleRouteChange(e),  colSpan: 2 },
             ],
-            
             [
               { label: "Ngày xuất phát", value: newTrip.departureDate, type: "date", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureDate: e.target.value })), min: new Date().toISOString().slice(0, 10) },
               { label: "Giờ đi", value: newTrip.departureTime, type: "time", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, departureTime: e.target.value })) },
@@ -636,9 +689,8 @@ const ManagerTrip = () => {
                   }
                 }
               },
-              { label: "Ghế có sẵn", value: newTrip.availableSeats, type: "number", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, availableSeats: e.target.value })) },
+              // Đã xoá trường Ghế có sẵn ở đây
             ],
-            
             [
               { label: "Ghi chú", value: newTrip.notes, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
             ],
@@ -705,4 +757,4 @@ const ManagerTrip = () => {
   );
 };
 
-export default ManagerTrip; 
+export default ManagerTrip;

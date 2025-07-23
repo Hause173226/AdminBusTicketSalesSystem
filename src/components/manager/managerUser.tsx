@@ -2,7 +2,7 @@ import  { useEffect, useState } from "react";
 import { userServices } from "../../services/userServices";
 import BasicTable from "../tables/BasicTable";
 import BasicModal from "../modal/BasicModal";
-import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye, Pencil, Trash2 } from "lucide-react";
+import { Users, Calendar as CalendarIcon, Phone, Mail, MapPin, User as UserIcon, Eye, Pencil, Trash2, Lock, Unlock } from "lucide-react";
 import ConfirmPopover from "../common/ConfirmPopover";
 import { toast } from "react-toastify";
 import SearchInput from "./SearchInput";
@@ -61,6 +61,7 @@ const ManagerUser = () => {
   const [pageSize, setPageSize] = useState(6);
   const [searchValue, setSearchValue] = useState("");
   const [editUserErrors, setEditUserErrors] = useState<{ email?: string; phone?: string }>({});
+  const [showBlocked, setShowBlocked] = useState(false);
 
   handleView = (user: any) => {
     setSelectedUser(user);
@@ -170,16 +171,28 @@ const ManagerUser = () => {
       setLoading(false);
     }
   };
-  const handleDeleteConfirm = async () => {
+  const handleToggleActiveConfirm = async () => {
     if (!deletePopover.user) return;
     try {
       setLoading(true);
-      await userServices.deleteUser(deletePopover.user._id);
-      setUsers(users => users.filter(u => u._id !== deletePopover.user._id));
+      if (deletePopover.user.isActive) {
+        // Block user (set isActive: false)
+        await userServices.deleteUser(deletePopover.user._id);
+        setUsers(users => users.map(u =>
+          u._id === deletePopover.user._id ? { ...u, isActive: false } : u
+        ));
+        toast.success("Block người dùng thành công");
+      } else {
+        // Mở khoá user (set isActive: true)
+        await userServices.changeUserStatus(deletePopover.user._id, true);
+        setUsers(users => users.map(u =>
+          u._id === deletePopover.user._id ? { ...u, isActive: true } : u
+        ));
+        toast.success("Mở khoá người dùng thành công");
+      }
       setDeletePopover({ open: false, user: null });
-      toast.success("Xoá người dùng thành công");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá người dùng");
+      toast.error(err.response?.data?.error || err.response?.data?.message || err.message || "Lỗi khi cập nhật trạng thái người dùng");
     } finally {
       setLoading(false);
     }
@@ -212,6 +225,8 @@ const ManagerUser = () => {
   // Lọc users theo searchValue
   const filteredUsers = users.filter(u => {
     const v = searchValue.toLowerCase();
+    // Lọc theo trạng thái hoạt động hoặc block
+    if (showBlocked ? u.isActive : !u.isActive) return false;
     return (
       u.fullName?.toLowerCase().includes(v) ||
       u.phone?.toLowerCase().includes(v) ||
@@ -244,21 +259,22 @@ const ManagerUser = () => {
           </button>
           <div className="relative">
             <button
-              className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
-              title="Xoá"
+              className={`p-2 ${row.isActive ? 'text-red-500 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'} bg-transparent rounded text-xs flex items-center justify-center shadow-none border-none focus:outline-none`}
+              title={row.isActive ? 'Block tài khoản' : 'Mở khoá tài khoản'}
               onClick={() => handleDelete(row)}
             >
-              <Trash2 size={18} />
+              {row.isActive ? <Lock size={18} /> : <Unlock size={18} />}
             </button>
             {deletePopover.open && deletePopover.user && deletePopover.user._id === row._id && (
               <ConfirmPopover
                 open={deletePopover.open}
                 message={
                   <>
-                  <div>Bạn có chắc chắn muốn</div>
-                  <div className="font-bold text-red-600 text-base">xoá người dùng này?</div>
-                </>}
-                onConfirm={handleDeleteConfirm}
+                    <div>Bạn có chắc chắn muốn</div>
+                    <div className={`font-bold text-base ${row.isActive ? 'text-red-600' : 'text-green-600'}`}>{row.isActive ? 'block tài khoản này?' : 'mở khoá tài khoản này?'}</div>
+                  </>
+                }
+                onConfirm={handleToggleActiveConfirm}
                 onCancel={handleDeleteCancel}
               />
             )}
@@ -272,13 +288,24 @@ const ManagerUser = () => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Danh sách người dùng</h3>
-        <div className="ml-auto">
+        <div className="flex items-center gap-4 ml-auto">
           <SearchInput
             value={searchValue}
             onChange={e => { setSearchValue(e.target.value); setCurrentPage(1); }}
             placeholder="Tìm kiếm tên, số điện thoại, email..."
             debounceMs={1000}
           />
+          <button
+            onClick={() => setShowBlocked(v => !v)}
+            className={`flex items-center px-3 py-1 rounded-full border transition-colors duration-200 focus:outline-none ${showBlocked ? 'bg-red-100 border-red-400' : 'bg-green-100 border-green-400'}`}
+            style={{ minWidth: 90 }}
+          >
+            <span className={`text-sm font-semibold ${showBlocked ? 'text-red-700' : 'text-green-700'}`}>{showBlocked ? 'Block' : 'Unblock'}</span>
+            <span className={`ml-2 w-8 h-4 flex items-center bg-white rounded-full border ${showBlocked ? 'border-red-400' : 'border-green-400'}`}
+              style={{ transition: 'background 0.2s' }}>
+              <span className={`block w-4 h-4 rounded-full shadow transform transition-transform duration-200 ${showBlocked ? 'bg-red-400 translate-x-4' : 'bg-green-400 translate-x-0'}`}></span>
+            </span>
+          </button>
         </div>
       </div>
       {loading ? (

@@ -115,7 +115,8 @@ const ManagerBus = () => {
       setDeleteConfirmId(null);
       toast.success("Xoá xe bus thành công");
     } catch (err: any) {
-      toast.error(err.response?.data?.error || err.response?.data?.message || "Lỗi khi xoá xe bus");
+      // Log ra đúng lỗi trả về từ backend
+      toast.error(err.response?.data?.error || err.response?.data?.message || err.message || "Lỗi khi xoá xe bus");
     }
   };
 
