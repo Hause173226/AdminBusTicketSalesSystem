@@ -24,7 +24,7 @@ export const userServices = {
     return axiosInstance.post("/users/signin", {
       email,
       password,
-      role: "admin"
+      role: "admin",
     });
   },
   forgotPassword: (email: string) => {
