@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { bookingService } from "../../services/bookingServic";
 import BasicTable from "../tables/BasicTable";
-import { Eye, Pencil, Trash2, CheckCircle, XCircle, Clock, CreditCard, DollarSign } from "lucide-react";
+import {
+  Eye,
+  Pencil,
+  Trash2,
+  CheckCircle,
+  XCircle,
+  Clock,
+  CreditCard,
+  DollarSign,
+} from "lucide-react";
 import BasicModal from "../modal/BasicModal";
 import Pagination from "../common/Pagination";
 import { toast } from "react-toastify";
@@ -10,49 +19,49 @@ import ConfirmPopover from "../common/ConfirmPopover";
 
 // Status styling for booking status
 const bookingStatusColor: Record<string, string> = {
-  "confirmed": "bg-green-100 text-green-700 border border-green-300 font-bold",
-  "pending": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
-  "cancelled": "bg-red-100 text-red-700 border border-red-300 font-bold",
-  "completed": "bg-blue-100 text-blue-700 border border-blue-300 font-bold",
+  confirmed: "bg-green-100 text-green-700 border border-green-300 font-bold",
+  pending: "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
+  cancelled: "bg-red-100 text-red-700 border border-red-300 font-bold",
+  completed: "bg-blue-100 text-blue-700 border border-blue-300 font-bold",
 };
 
 const bookingStatusIcon: Record<string, JSX.Element> = {
-  "confirmed": <CheckCircle size={16} className="inline mr-1" />,
-  "pending": <Clock size={16} className="inline mr-1" />,
-  "cancelled": <XCircle size={16} className="inline mr-1" />,
-  "completed": <CheckCircle size={16} className="inline mr-1" />,
+  confirmed: <CheckCircle size={16} className="inline mr-1" />,
+  pending: <Clock size={16} className="inline mr-1" />,
+  cancelled: <XCircle size={16} className="inline mr-1" />,
+  completed: <CheckCircle size={16} className="inline mr-1" />,
 };
 
 const bookingStatusLabel: Record<string, string> = {
-  "confirmed": "Đã xác nhận",
-  "pending": "Chờ xác nhận",
-  "cancelled": "Đã huỷ",
-  "completed": "Hoàn thành",
+  confirmed: "Đã xác nhận",
+  pending: "Chờ xác nhận",
+  cancelled: "Đã huỷ",
+  completed: "Hoàn thành",
 };
 
 // Status styling for payment status
 const paymentStatusColor: Record<string, string> = {
-  "paid": "bg-green-100 text-green-700 border border-green-300 font-bold",
-  "pending": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
-  "failed": "bg-red-100 text-red-700 border border-red-300 font-bold",
-  "refunded": "bg-gray-100 text-gray-700 border border-gray-300 font-bold",
-  "unpaid": "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold", // Đổi sang vàng
+  paid: "bg-green-100 text-green-700 border border-green-300 font-bold",
+  pending: "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold",
+  failed: "bg-red-100 text-red-700 border border-red-300 font-bold",
+  refunded: "bg-gray-100 text-gray-700 border border-gray-300 font-bold",
+  unpaid: "bg-yellow-100 text-yellow-800 border border-yellow-300 font-bold", // Đổi sang vàng
 };
 
 const paymentStatusIcon: Record<string, JSX.Element> = {
-  "paid": <DollarSign size={16} className="inline mr-1" />,
-  "pending": <Clock size={16} className="inline mr-1" />,
-  "failed": <XCircle size={16} className="inline mr-1" />,
-  "refunded": <CreditCard size={16} className="inline mr-1" />,
-  "unpaid": <XCircle size={16} className="inline mr-1" />,
+  paid: <DollarSign size={16} className="inline mr-1" />,
+  pending: <Clock size={16} className="inline mr-1" />,
+  failed: <XCircle size={16} className="inline mr-1" />,
+  refunded: <CreditCard size={16} className="inline mr-1" />,
+  unpaid: <XCircle size={16} className="inline mr-1" />,
 };
 
 const paymentStatusLabel: Record<string, string> = {
-  "paid": "Đã thanh toán",
-  "pending": "Chờ thanh toán",
-  "failed": "Thanh toán thất bại",
-  "refunded": "Đã hoàn tiền",
-  "unpaid": "Chưa thanh toán",
+  paid: "Đã thanh toán",
+  pending: "Chờ thanh toán",
+  failed: "Thanh toán thất bại",
+  refunded: "Đã hoàn tiền",
+  unpaid: "Chưa thanh toán",
 };
 
 const ManagerBooking: React.FC = () => {
@@ -79,23 +88,43 @@ const ManagerBooking: React.FC = () => {
   // Sửa nút huỷ trong columns
   const columns = [
     { key: "bookingCode", label: "Mã Booking" },
-    { key: "customer", label: "Khách hàng", render: (v: any) => v?.fullName || v?.name || v?._id || "" },
-    { key: "trip", label: "Tuyến xe", render: (_: any, row: any) => getTripName(row.trip) },
-    { key: "totalAmount", label: "Tổng tiền", render: (v: any) => v?.toLocaleString('vi-VN') + " VNĐ" },
-    { 
-      key: "bookingStatus", 
+    {
+      key: "customer",
+      label: "Khách hàng",
+      render: (v: any) => v?.fullName || v?.name || v?._id || "",
+    },
+    {
+      key: "trip",
+      label: "Tuyến xe",
+      render: (_: any, row: any) => getTripName(row.trip),
+    },
+    {
+      key: "totalAmount",
+      label: "Tổng tiền",
+      render: (v: any) => v?.toLocaleString("vi-VN") + " VNĐ",
+    },
+    {
+      key: "bookingStatus",
       label: "Trạng thái",
       render: (value: string) => (
-        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${bookingStatusColor[value] || "bg-gray-100 text-gray-800"}`}>
+        <span
+          className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${
+            bookingStatusColor[value] || "bg-gray-100 text-gray-800"
+          }`}
+        >
           {bookingStatusIcon[value]} {bookingStatusLabel[value] || value}
         </span>
       ),
     },
-    { 
-      key: "paymentStatus", 
+    {
+      key: "paymentStatus",
       label: "Thanh toán",
       render: (value: string) => (
-        <span className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${paymentStatusColor[value] || "bg-gray-100 text-gray-800"}`}>
+        <span
+          className={`px-1 py-0.5 text-xs rounded flex items-center gap-0.5 ${
+            paymentStatusColor[value] || "bg-gray-100 text-gray-800"
+          }`}
+        >
           {paymentStatusIcon[value]} {paymentStatusLabel[value] || value}
         </span>
       ),
@@ -112,7 +141,7 @@ const ManagerBooking: React.FC = () => {
           >
             <Eye size={18} />
           </button>
-          <div className="relative">
+          {/* <div className="relative">
             <button
               className="p-2 text-red-500 bg-transparent rounded hover:bg-red-50 text-xs flex items-center justify-center shadow-none border-none focus:outline-none"
               title="Huỷ booking"
@@ -151,7 +180,7 @@ const ManagerBooking: React.FC = () => {
                 }}
               />
             )}
-          </div>
+          </div> */}
         </div>
       ),
     },
@@ -167,14 +196,17 @@ const ManagerBooking: React.FC = () => {
     bookingService.getAllBookings().then((data) => {
       const arr = Array.isArray(data.data) ? data.data : [];
       // Sort by createdAt descending (newest first)
-      arr.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      arr.sort(
+        (a: any, b: any) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
       setBookings(arr);
       setLoading(false);
     });
   }, []);
 
   // Filter bookings by customer name or booking code
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b) => {
     const v = searchValue.toLowerCase();
     return (
       b.customer?.fullName?.toLowerCase().includes(v) ||
@@ -183,33 +215,80 @@ const ManagerBooking: React.FC = () => {
     );
   });
   const totalPages = Math.ceil(filteredBookings.length / pageSize);
-  const paginatedBookings = filteredBookings.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginatedBookings = filteredBookings.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   // Detail rows for modal
   const detailRows = selectedBooking
     ? [
         [
           { label: "Mã Booking", value: selectedBooking.bookingCode },
-          { label: "Ngày đặt", value: selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString() : "" },
+          {
+            label: "Ngày đặt",
+            value: selectedBooking.createdAt
+              ? new Date(selectedBooking.createdAt).toLocaleString()
+              : "",
+          },
         ],
         [
-          { label: "Khách hàng", value: selectedBooking.customer?.fullName || selectedBooking.customer?.name || "" },
+          {
+            label: "Khách hàng",
+            value:
+              selectedBooking.customer?.fullName ||
+              selectedBooking.customer?.name ||
+              "",
+          },
           { label: "Tuyến xe", value: getTripName(selectedBooking.trip) },
         ],
         [
-          { label: "Điểm đi", value: selectedBooking.trip?.route?.originStation?.name || "" },
-          { label: "Điểm đến", value: selectedBooking.trip?.route?.destinationStation?.name || "" },
+          {
+            label: "Điểm đi",
+            value: selectedBooking.trip?.route?.originStation?.name || "",
+          },
+          {
+            label: "Điểm đến",
+            value: selectedBooking.trip?.route?.destinationStation?.name || "",
+          },
         ],
         [
-          { label: "Ghế", value: Array.isArray(selectedBooking.seatNumbers) ? selectedBooking.seatNumbers.join(", ") : (selectedBooking.seatNumbers || "") },
-          { label: "Tổng tiền", value: selectedBooking.totalAmount?.toLocaleString('vi-VN') + " VNĐ" },
+          {
+            label: "Ghế",
+            value: Array.isArray(selectedBooking.seatNumbers)
+              ? selectedBooking.seatNumbers.join(", ")
+              : selectedBooking.seatNumbers || "",
+          },
+          {
+            label: "Tổng tiền",
+            value:
+              selectedBooking.totalAmount?.toLocaleString("vi-VN") + " VNĐ",
+          },
         ],
         [
-          { label: "Trạng thái", value: bookingStatusLabel[selectedBooking.bookingStatus] || selectedBooking.bookingStatus },
-          { label: "Thanh toán", value: paymentStatusLabel[selectedBooking.paymentStatus] || selectedBooking.paymentStatus },
+          {
+            label: "Trạng thái",
+            value:
+              bookingStatusLabel[selectedBooking.bookingStatus] ||
+              selectedBooking.bookingStatus,
+          },
+          {
+            label: "Thanh toán",
+            value:
+              paymentStatusLabel[selectedBooking.paymentStatus] ||
+              selectedBooking.paymentStatus,
+          },
         ],
         [
-          { label: "Phương thức thanh toán", value: selectedBooking.paymentMethod === "online" ? "Online" : selectedBooking.paymentMethod === "offline" ? "Tại quầy" : (selectedBooking.paymentMethod || "Chưa chọn") },
+          {
+            label: "Phương thức thanh toán",
+            value:
+              selectedBooking.paymentMethod === "online"
+                ? "Online"
+                : selectedBooking.paymentMethod === "offline"
+                ? "Tại quầy"
+                : selectedBooking.paymentMethod || "Chưa chọn",
+          },
           { label: "Ghi chú", value: selectedBooking.notes || "Không có" },
         ],
       ]
@@ -218,11 +297,16 @@ const ManagerBooking: React.FC = () => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 relative">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">Danh sách Booking</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          Danh sách Booking
+        </h3>
         <div className="flex items-center gap-2 ml-auto">
           <SearchInput
             value={searchValue}
-            onChange={e => { setSearchValue(e.target.value); setCurrentPage(1); }}
+            onChange={(e) => {
+              setSearchValue(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Tìm kiếm..."
             debounceMs={1000}
           />
@@ -238,8 +322,11 @@ const ManagerBooking: React.FC = () => {
             currentPage={currentPage}
             totalPages={totalPages}
             pageSize={pageSize}
-            onPageChange={page => setCurrentPage(page)}
-            onPageSizeChange={size => { setPageSize(size); setCurrentPage(1); }}
+            onPageChange={(page) => setCurrentPage(page)}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
             pageSizeOptions={[6, 15, 30, 50, 100]}
           />
         </>
@@ -249,7 +336,9 @@ const ManagerBooking: React.FC = () => {
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           title="Chi tiết Booking"
-          subtitle={<span className="text-gray-500 text-xs">Thông tin chi tiết vé</span>}
+          subtitle={
+            <span className="text-gray-500 text-xs">Thông tin chi tiết vé</span>
+          }
           rows={detailRows}
           readonly
         />
