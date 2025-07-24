@@ -302,7 +302,7 @@ const ManagerTrip = () => {
     return time;
   };
   const handleCreateTrip = async () => {
-    // Kiểm tra giờ xuất phát phải cách hiện tại ít nhất 1 tiếng
+    // Kiểm tra giờ xuất phát phải cách hiện tại ít nhất 1 phút
     const now = new Date();
     // Chuyển đổi giờ đi về dạng HH:mm 24h nếu cần
     let depTime = newTrip.departureTime;
@@ -315,8 +315,8 @@ const ManagerTrip = () => {
       depTime = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
     }
     const departureDateTime = new Date(`${newTrip.departureDate}T${depTime}`);
-    if (departureDateTime.getTime() - now.getTime() < 60 * 60 * 1000) {
-      toast.error("Giờ xuất phát phải cách thời điểm hiện tại ít nhất 1 tiếng!");
+    if (departureDateTime.getTime() - now.getTime() < 60 * 1000) {
+      toast.error("Giờ xuất phát phải cách thời điểm hiện tại ít nhất 1 phút!");
       return;
     }
     // Validate required fields
@@ -692,10 +692,11 @@ const ManagerTrip = () => {
                   }
                 }
               },
+              { label: "Ghi chú", value: newTrip.notes, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, notes: e.target.value })) },
               // Đã xoá trường Ghế có sẵn ở đây
             ],
             [
-              { label: "Ghi chú", value: newTrip.notes, type: "text", onChange: (e: any) => setNewTrip((r: any) => ({ ...r, notes: e.target.value })), colSpan: 2 },
+             
             ],
           ]}
         />
@@ -720,12 +721,25 @@ const ManagerTrip = () => {
             ],
             [
               { label: "Mã chuyến", value: editTrip.tripCode, type: "text", onChange: (e: any) => setEditTrip((r: any) => ({ ...r, tripCode: e.target.value })) },
-              { label: "Trạng thái", value: editTrip.status, type: "select", options: [
-                { label: "Đã lên lịch", value: "scheduled" },
-                { label: "Đang chạy", value: "in_progress" },
-                { label: "Hoàn thành", value: "completed" },
-                { label: "Đã huỷ", value: "cancelled" },
-              ], onChange: (e: any) => setEditTrip((r: any) => ({ ...r, status: e.target.value })) },
+              // Trạng thái: chỉ cho phép chọn 'Đã huỷ' nếu đang ở 'scheduled' hoặc 'in_progress', còn lại chỉ hiển thị text
+              (['scheduled', 'in_progress'].includes(editTrip.status)
+                ? {
+                    label: "Trạng thái",
+                    value: editTrip.status,
+                    type: "select",
+                    options: [
+                      { label: statusLabel[editTrip.status], value: editTrip.status },
+                      { label: "Đã huỷ", value: "cancelled" },
+                    ],
+                    onChange: (e: any) => setEditTrip((r: any) => ({ ...r, status: e.target.value })),
+                  }
+                : {
+                    label: "Trạng thái",
+                    value: statusLabel[editTrip.status] || editTrip.status,
+                    type: "text",
+                    readOnly: true,
+                  }
+              ),
             ],
             [
               { label: "Xe", value: editTrip.bus, type: "searchable-select", options: buses.map((b) => ({ label: b.licensePlate || b.name, value: b._id })), onChange: (e: any) => handleEditBusChange(e) },

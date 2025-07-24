@@ -451,8 +451,8 @@ const ManagerRoute = () => {
           rows={[
            
             [
-              { label: "Điểm đi", value: newRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleOriginChange },
-              { label: "Điểm đến", value: newRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleDestinationChange },
+              { label: "Điểm đi", value: newRoute.originStation, type: "searchable-select", options: stations.filter(s => s.status === 'active').map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleOriginChange },
+              { label: "Điểm đến", value: newRoute.destinationStation, type: "searchable-select", options: stations.filter(s => s.status === 'active').map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: handleDestinationChange },
             ],
             [
               { label: "Khoảng cách (km)", value: newRoute.distanceKm, type: "number", icon: <Clock size={18} />, onChange: (e: any) => setNewRoute((r: any) => ({ ...r, distanceKm: e.target.value })) },
@@ -478,7 +478,7 @@ const ManagerRoute = () => {
               { label: "Tên tuyến", value: editRoute.name, type: "text", icon: <TrendingUp size={18} />, onChange: (e: any) => setEditRoute((r: any) => ({ ...r, name: e.target.value })) },
             ],
             [
-              { label: "Điểm đi", value: editRoute.originStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đi", value: editRoute.originStation, type: "searchable-select", options: stations.filter(s => s.status === 'active').map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const originId = e.target.value;
                 const city1 = getCityByStationId(originId);
                 const city2 = getCityByStationId(editRoute.destinationStation);
@@ -486,7 +486,7 @@ const ManagerRoute = () => {
                 const code = city1 && city2 ? generateRouteCode(city1, city2, routes.map(r => r.code)) : editRoute.code;
                 setEditRoute((r: any) => ({ ...r, originStation: originId, name, code }));
               }},
-              { label: "Điểm đến", value: editRoute.destinationStation, type: "searchable-select", options: stations.map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
+              { label: "Điểm đến", value: editRoute.destinationStation, type: "searchable-select", options: stations.filter(s => s.status === 'active').map((s) => ({ label: `${s.name} (${s.address.city})`, value: s._id })), icon: <MapPin size={18} />, onChange: (e: any) => {
                 const destId = e.target.value;
                 const city1 = getCityByStationId(editRoute.originStation);
                 const city2 = getCityByStationId(destId);
