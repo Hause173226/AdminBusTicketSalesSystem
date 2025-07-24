@@ -289,7 +289,10 @@ const ManagerDriver = () => {
                   <div className="font-bold text-red-600 text-base">xoá tài xế này?</div>
                 </>
               }
-              onConfirm={() => handleDelete(row)}
+              onConfirm={() => {
+                setDeleteConfirmId(null); // Đóng modal trước
+                setTimeout(() => handleDelete(row), 100); // Thực hiện xóa sau
+              }}
               onCancel={() => setDeleteConfirmId(null)}
             />
           </div>

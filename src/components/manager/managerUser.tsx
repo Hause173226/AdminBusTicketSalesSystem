@@ -274,7 +274,10 @@ const ManagerUser = () => {
                     <div className={`font-bold text-base ${row.isActive ? 'text-red-600' : 'text-green-600'}`}>{row.isActive ? 'block tài khoản này?' : 'mở khoá tài khoản này?'}</div>
                   </>
                 }
-                onConfirm={handleToggleActiveConfirm}
+                onConfirm={() => {
+                  setDeletePopover({ open: false, user: null }); // Đóng modal trước
+                  setTimeout(() => handleToggleActiveConfirm(), 100); // Thực hiện logic sau
+                }}
                 onCancel={handleDeleteCancel}
               />
             )}
